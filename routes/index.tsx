@@ -1,12 +1,11 @@
 import { Head } from "$fresh/runtime.ts";
 import { Handlers, PageProps } from "$fresh/server.ts";
 import Counter from "../islands/Counter.tsx";
-import PocketBase from "https://esm.sh/pocketbase@0.9.0"
+import { MiddlewareState } from './_middleware.ts'
 
-export const handler: Handlers<unknown> = {
+export const handler: Handlers<MiddlewareState> = {
   async GET(_, ctx) {
-    const pb = new PocketBase('http://127.0.0.1:8090');
-    const adminData = await pb.admins.authWithPassword('', '')
+    const adminData = await ctx.state.pb.admins.authWithPassword('', '')
     return ctx.render(adminData);
   },
 };
