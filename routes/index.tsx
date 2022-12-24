@@ -1,21 +1,17 @@
-import { Head } from "$fresh/runtime.ts";
-import { Handlers, PageProps } from "$fresh/server.ts";
 import Counter from "../islands/Counter.tsx";
-import { MiddlewareState } from './_middleware.ts'
 
-export const handler: Handlers<MiddlewareState> = {
-  async GET(_, ctx) {
-    const adminData = await ctx.state.pb.admins.authWithPassword('', '')
-    return ctx.render(adminData);
-  },
-};
+import { Head } from "$fresh/runtime.ts";
 
-export default function Home({ data }: PageProps<unknown>) {
-  console.log(data);
+export default function Home() {
   return (
     <>
       <Head>
         <title>Fresh App</title>
+        <script
+          defer
+          src="/analytics"
+          data-domain="coffeeandcode.app"
+        ></script>
       </Head>
       <div class="p-4 mx-auto max-w-screen-md">
         <img

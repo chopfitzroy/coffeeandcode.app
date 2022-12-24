@@ -23,10 +23,13 @@ export async function handler(
     ctx.state.pb.authStore.clear();
   }
 
-
+  // @NOTE
+  // - Cannot mutate headers directly
+  // - https://github.com/satyarohith/sift/issues/29
   const resp = await ctx.next();
+  const headers = new Headers(resp.headers);
 
-  resp.headers.set('set-cookie', ctx.state.pb.authStore.exportToCookie());
+  headers.set('set-cookie', ctx.state.pb.authStore.exportToCookie());
 
-  return resp;
+  return new Response(resp.body, { ...resp, headers });
 }
