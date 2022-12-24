@@ -1,4 +1,5 @@
 import Counter from "../islands/Counter.tsx";
+import TrackControls from '../islands/TrackControls.tsx';
 
 import { Head } from "$fresh/runtime.ts";
 
@@ -24,6 +25,7 @@ export default function Home() {
           file, and refresh.
         </p>
         <Counter start={3} />
+        <TrackControls start={5} />
       </div>
     </>
   );
