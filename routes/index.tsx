@@ -1,7 +1,18 @@
 import { Head } from "$fresh/runtime.ts";
+import { Handlers, PageProps } from "$fresh/server.ts";
 import Counter from "../islands/Counter.tsx";
+import PocketBase from "https://esm.sh/pocketbase@0.9.0"
 
-export default function Home() {
+export const handler: Handlers<unknown> = {
+  async GET(_, ctx) {
+    const pb = new PocketBase('http://127.0.0.1:8090');
+    const adminData = await pb.admins.authWithPassword('', '')
+    return ctx.render(adminData);
+  },
+};
+
+export default function Home({ data }: PageProps<unknown>) {
+  console.log(data);
   return (
     <>
       <Head>
