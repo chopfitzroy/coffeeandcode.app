@@ -13,6 +13,7 @@ deno task start
 Built using the following technologies:
 
 - [fresh](https://fresh.deno.dev/)
+- [XState](https://xstate.js.org/)
 - [PocketBase](https://pocketbase.io/)
 - [Plausible Analytics](https://plausible.io/)
 
