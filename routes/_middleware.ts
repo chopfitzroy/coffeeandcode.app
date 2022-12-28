@@ -12,7 +12,7 @@ export async function handler(
   // @NOTE
   // - Similar to recommended SvelteKit implementation
   // - https://github.com/pocketbase/js-sdk#ssr-integration
-  ctx.state.pb = new PocketBase("http://127.0.0.1:8090");
+  ctx.state.pb = new PocketBase("https://api.coffeeandcode.app");
   ctx.state.pb.authStore.loadFromCookie(req.headers.get('cookie') || '');
 
   try {

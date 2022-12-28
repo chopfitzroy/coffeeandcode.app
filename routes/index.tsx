@@ -1,9 +1,26 @@
 import Counter from "../islands/Counter.tsx";
-import TrackControls from '../islands/TrackControls.tsx';
+import TrackControls from "../islands/TrackControls.tsx";
 
 import { Head } from "$fresh/runtime.ts";
+import { HandlerContext, Handlers, PageProps } from "$fresh/server.ts";
+import { Admin, Record } from "https://esm.sh/pocketbase@0.9.0";
+import { MiddlewareState } from "./_middleware.ts";
 
-export default function Home() {
+interface HomeProps {
+  loggedIn: boolean;
+}
+
+export const handler: Handlers = {
+  async GET(_, ctx: HandlerContext<HomeProps, MiddlewareState>) {
+    const pb = ctx.state.pb;
+    const loggedIn = pb.authStore.model instanceof Record ||
+      pb.authStore.model instanceof Admin;
+    return ctx.render({ loggedIn });
+  },
+};
+
+export default function Home(props: PageProps<HomeProps>) {
+  const { loggedIn } = props.data;
   return (
     <>
       <Head>
@@ -12,7 +29,8 @@ export default function Home() {
           defer
           src="/analytics"
           data-domain="coffeeandcode.app"
-        ></script>
+        >
+        </script>
       </Head>
       <div class="p-4 mx-auto max-w-screen-md">
         <img
@@ -21,8 +39,9 @@ export default function Home() {
           alt="the fresh logo: a sliced lemon dripping with juice"
         />
         <p class="my-6">
-          Welcome to `fresh`. Try updating this message in the ./routes/index.tsx
-          file, and refresh.
+          Welcome to `fresh`. Try updating this message in the
+          ./routes/index.tsx file, and refresh.
+          {loggedIn ? '🎉' : '🛑'}
         </p>
         <Counter start={3} />
         <TrackControls start={5} />
