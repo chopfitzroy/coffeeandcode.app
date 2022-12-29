@@ -9,8 +9,14 @@ import * as $2 from "./routes/analytics.ts";
 import * as $3 from "./routes/api/event.ts";
 import * as $4 from "./routes/api/joke.ts";
 import * as $5 from "./routes/index.tsx";
+import * as $6 from "./routes/login.tsx";
+import * as $7 from "./routes/signout.tsx";
+import * as $8 from "./routes/signup.tsx";
 import * as $$0 from "./islands/Counter.tsx";
-import * as $$1 from "./islands/TrackControls.tsx";
+import * as $$1 from "./islands/Header.tsx";
+import * as $$2 from "./islands/LoginForm.tsx";
+import * as $$3 from "./islands/SignupForm.tsx";
+import * as $$4 from "./islands/TrackControls.tsx";
 
 const manifest = {
   routes: {
@@ -20,10 +26,16 @@ const manifest = {
     "./routes/api/event.ts": $3,
     "./routes/api/joke.ts": $4,
     "./routes/index.tsx": $5,
+    "./routes/login.tsx": $6,
+    "./routes/signout.tsx": $7,
+    "./routes/signup.tsx": $8,
   },
   islands: {
     "./islands/Counter.tsx": $$0,
-    "./islands/TrackControls.tsx": $$1,
+    "./islands/Header.tsx": $$1,
+    "./islands/LoginForm.tsx": $$2,
+    "./islands/SignupForm.tsx": $$3,
+    "./islands/TrackControls.tsx": $$4,
   },
   baseUrl: import.meta.url,
   config,

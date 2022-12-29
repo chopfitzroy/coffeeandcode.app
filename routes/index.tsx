@@ -1,3 +1,4 @@
+import Header from "../islands/Header.tsx";
 import Counter from "../islands/Counter.tsx";
 import TrackControls from "../islands/TrackControls.tsx";
 
@@ -11,7 +12,7 @@ interface HomeProps {
 }
 
 export const handler: Handlers = {
-  async GET(_, ctx: HandlerContext<HomeProps, MiddlewareState>) {
+  GET(_, ctx: HandlerContext<HomeProps, MiddlewareState>) {
     const pb = ctx.state.pb;
     const loggedIn = pb.authStore.model instanceof Record ||
       pb.authStore.model instanceof Admin;
@@ -33,6 +34,7 @@ export default function Home(props: PageProps<HomeProps>) {
         </script>
       </Head>
       <div class="p-4 mx-auto max-w-screen-md">
+        <Header loggedIn={loggedIn} />
         <img
           src="/logo.svg"
           class="w-32 h-32"

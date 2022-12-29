@@ -1,9 +1,7 @@
 import { MiddlewareHandlerContext } from "$fresh/server.ts";
 import PocketBase from "https://esm.sh/pocketbase@0.9.0"
 
-export interface MiddlewareState {
-  pb: PocketBase
-}
+export type MiddlewareState = Record<'pb', PocketBase>
 
 export async function handler(
   req: Request,

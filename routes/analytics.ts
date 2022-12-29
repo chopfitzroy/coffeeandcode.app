@@ -1,7 +1,7 @@
-import { HandlerContext, Handlers } from "$fresh/server.ts";
+import { Handlers } from "$fresh/server.ts";
 
 export const handler: Handlers = {
-  GET(_req: Request, _ctx: HandlerContext) {
+  GET() {
     return fetch("https://plausible.io/js/script.js");
   },
 };
