@@ -8,6 +8,12 @@ Start the project:
 deno task start
 ```
 
+### Authentication
+
+All authentication is done in the client (not SSR) originally we used an SSR implementation but the only way to share the auth store between the _server_ and the client was to use [disable `httpOnly`](https://github.com/pocketbase/js-sdk/issues/69).
+
+Given the nature of the app a shared auth store felt like overkill and increased the surface area for security concerns with no real value added.
+
 ### Architecture
 
 Built using the following technologies:

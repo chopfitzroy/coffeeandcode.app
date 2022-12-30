@@ -1,3 +1,20 @@
+import { pb } from "../utils/pocketbase.ts"
+
+const signUp = async (data: SignupRequest) => {
+  try {
+    await pb.collection("users").create(data);
+    await pb.collection("users").authWithPassword(
+      data.username,
+      data.password,
+    );
+  } catch (err) {
+    console.log("Error signing up", err);
+    return new Response(JSON.stringify({ data: err }), {
+      status: 500,
+    });
+  }
+};
+
 const SignupForm = () => {
   // @TODO
   // - Handle error feedback

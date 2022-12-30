@@ -1,12 +1,19 @@
-interface HeaderProps {
-  loggedIn: boolean;
-}
+import { useEffect, useState } from "preact/hooks";
+import { Record } from "pocketbase";
+import { pb } from "../utils/pocketbase.ts";
 
-// @TODO
-// - Create sign up route
-// - Create login route
-// - https://github.com/fireship-io/pocketchat-tutorial/blob/main/src/lib/Login.svelte
-const Header = ({ loggedIn }: HeaderProps) => {
+const Header = () => {
+  const [loggedIn, setLoggedIn] = useState(
+    pb.authStore.model instanceof Record,
+  );
+
+  useEffect(() => {
+    const remove = pb.authStore.onChange((_, model) => {
+      setLoggedIn(model instanceof Record);
+    });
+    return remove;
+  }, []);
+
   if (loggedIn) {
     return (
       <a href="/signout">

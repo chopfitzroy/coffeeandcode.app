@@ -1,5 +1,3 @@
-import PocketBase from "https://esm.sh/pocketbase@0.9.0";
-
 const LoginForm = () => {
 
 	return (
