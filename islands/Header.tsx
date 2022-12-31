@@ -2,6 +2,10 @@ import { useEffect, useState } from "preact/hooks";
 import { Record } from "pocketbase";
 import { pb } from "../utils/pocketbase.ts";
 
+const signOut = () => {
+  pb.authStore.clear();
+};
+
 const Header = () => {
   const [loggedIn, setLoggedIn] = useState(
     pb.authStore.model instanceof Record,
@@ -14,18 +18,18 @@ const Header = () => {
     return remove;
   }, []);
 
-  if (loggedIn) {
-    return (
-      <a href="/signout">
-        Sign out
-      </a>
-    );
-  }
-
   return (
-    <a href="/signup">
-      Sign up
-    </a>
+    <div>
+      {loggedIn ? (
+        <button onClick={signOut}>
+          Sign out
+        </button>
+      ) : (
+        <a href="/signup">
+          Sign up
+        </a>
+      )}
+    </div>
   );
 };
 

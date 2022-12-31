@@ -1,3 +1,3 @@
 import PocketBase from "pocketbase";
 
-export const pb: PocketBase = new PocketBase("https://api.coffeeandcode.app");
+export const pb = new PocketBase("https://api.coffeeandcode.app");
