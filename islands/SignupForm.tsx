@@ -55,6 +55,9 @@ const SignupForm = () => {
 
   return (
     <div>
+      <p>
+        Already a user? <a href="/login">Login</a>.
+      </p>
       {pageState === "error" && <p>There has been an error</p>}
       <form onSubmit={submitHandler}>
         <label for="email">Email address</label>
