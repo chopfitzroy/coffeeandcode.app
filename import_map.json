@@ -9,6 +9,6 @@
     "@preact/signals-core": "https://esm.sh/*@preact/signals-core@1.0.1",
     "twind": "https://esm.sh/twind@0.16.17",
     "twind/": "https://esm.sh/twind@0.16.17/",
-    "pocketbase": "https://esm.sh/pocketbase@0.9.0"
+    "pocketbase": "https://esm.sh/pocketbase@0.9.1"
   }
 }
