@@ -24,7 +24,6 @@ export const handler: Handlers = {
     const tracks = await pb.collection("tracks").getFullList<Track>(50, {
       sort: "-published",
     });
-    console.log(tracks);
     return ctx.render({ tracks });
   },
 };
