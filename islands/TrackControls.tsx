@@ -1,17 +1,11 @@
-import { useSignal } from "@preact/signals";
-import { Button } from "../components/Button.tsx";
+import { counterSignal, counterService } from "../services/playerService.ts";
 
-interface CounterProps {
-  start: number;
-}
-
-const TrackControls = (props: CounterProps) => {
-  const count = useSignal(props.start);
-  return (
+const TrackControls = () => {
+   return (
     <div>
-      <p>{count}</p>
-      <button onClick={() => count.value--}>-1</button>
-      <button onClick={() => count.value++}>+1</button>
+      <p>{counterSignal.value.context.count}</p>
+      <button onClick={() => counterService.send('DEC')}>-1</button>
+      <button onClick={() => counterService.send('INC')}>+1</button>
     </div>
   );
 }
