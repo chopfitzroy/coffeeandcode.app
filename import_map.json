@@ -10,6 +10,7 @@
     "twind": "https://esm.sh/twind@0.16.17",
     "twind/": "https://esm.sh/twind@0.16.17/",
     "pocketbase": "https://esm.sh/pocketbase@0.9.1",
-    "xstate": "https://esm.sh/xstate@4.35.1"
+    "xstate": "https://esm.sh/xstate@4.35.1",
+    "howler": "https://esm.sh/howler@2.2.3"
   }
 }
