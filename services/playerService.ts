@@ -1,29 +1,32 @@
 import { signal } from "@preact/signals";
-import { assign, interpret,createMachine } from 'xstate';
+import { interpret, createMachine } from 'xstate';
 
 interface CounterMachineContext {
-  count: number;
+  player: unknown; // Howler instance
+  volume: number;
+  progress: number;
+
 }
 
-const increment = (context: CounterMachineContext) => context.count + 1;
-const decrement = (context: CounterMachineContext) => context.count - 1;
+const initialState = 'idle';
+const createInitialContext = (): CounterMachineContext => ({
+  player: null,
+  volume: 50,
+  progress: 0,
+});
 
 const counterMachine = createMachine<CounterMachineContext>({
-  initial: 'active',
-  context: {
-    count: 0
-  },
+  initial: initialState,
+  context: createInitialContext(),
   states: {
-    active: {
-      on: {
-        INC: { actions: assign({ count: increment }) },
-        DEC: { actions: assign({ count: decrement }) }
-      }
-    }
+    idle: {},
+    paused: {},
+    playing: {},
+    failure: {},
   }
 });
 
-const counterSignal = signal(counterMachine.getInitialState('active'));
+const counterSignal = signal(counterMachine.getInitialState(initialState));
 
 const counterService = interpret(counterMachine)
   .onTransition((state) => counterSignal.value = state)
