@@ -20,8 +20,10 @@ const Tracks = ({ tracks }: TracksProps) => {
         <button
           onClick={() => playerService.send({
             type: "ADD_TRACK",
-            value:
-              `https://api.coffeeandcode.app/api/files/${track.collectionId}/${track.id}/${track.audio}`,
+            value: {
+              track: `https://api.coffeeandcode.app/api/files/${track.collectionId}/${track.id}/${track.audio}`,
+              position: 0,
+            },
           })}
         >
           {track.title}

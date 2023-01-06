@@ -1,5 +1,6 @@
 import Header from "../islands/Header.tsx";
 import Tracks, { Track } from "../islands/Tracks.tsx";
+import TrackControls from "../islands/TrackControls.tsx";
 
 import { Head } from "$fresh/runtime.ts";
 import { pb } from "../utils/pocketbase.ts";
@@ -42,6 +43,7 @@ export default function Home(props: PageProps<HomeProps>) {
           ./routes/index.tsx file, and refresh.
         </p>
         <Tracks tracks={props.data.tracks} />
+        <TrackControls />
       </div>
     </>
   );
