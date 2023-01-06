@@ -2,46 +2,64 @@ import { Howl } from "howler";
 import { signal } from "@preact/signals";
 import { assign, createMachine, interpret } from "xstate";
 
-interface PlayerMachineContext {
-  track: string;
-  player: Howl;
-  volume: number;
+type Required<Type, Key extends keyof Type> = Type & {
+  [Property in Key]-?: Type[Property];
+};
+
+interface Progress {
+  id: string;
   progress: number;
 }
 
-type PartialPlayerMachineContext = Partial<PlayerMachineContext>;
+interface PlayerMachineContext {
+  volume: number;
+  history: Progress[];
+  track?: string;
+  player?: Howl;
+}
 
-const initialState = "empty";
+const initialState = "hidden";
 
-const createInitialContext = (): PartialPlayerMachineContext => ({
-  volume: 0.5,
-  progress: 0,
+// @TODO
+// - This can probably be cleaned up slightly
+const createInitialContext = (context?: PlayerMachineContext): PlayerMachineContext => ({
+  volume: context?.volume ?? 0.5,
+  history: context?.history || [],
 });
 
-const counterMachine = createMachine<PartialPlayerMachineContext>({
+const counterMachine = createMachine<PlayerMachineContext>({
+  predictableActionArguments: true,
   context: createInitialContext(),
   initial: initialState,
-  states: {
-    empty: {
-      on: {
-        ADD_TRACK: {
-          target: "playing",
-          actions: [
-            assign({ track: (_, event) => event.value }),
-          ],
-        },
-      },
-      exit: [
-        assign<PlayerMachineContext>({
+  on: {
+    STOP: {
+      target: "hidden",
+      actions: assign((context) => createInitialContext(context))
+    },
+    ADD_TRACK: {
+      target: "playing",
+      actions: [
+        assign({ track: (_, event) => event.value }),
+        assign({
           player: (context) => {
-            return new Howl({ src: [context.track] });
+            return new Howl({
+              // @ts-expect-error: track is set in previous action
+              src: [context.track],
+              volume: context.volume,
+            });
           },
         }),
       ],
     },
+    LOAD_SETTINGS: {
+      actions: assign((_, event) => event.value),
+    },
+  },
+  states: {
+    hidden: {},
     paused: {
       entry: [
-        (context: PlayerMachineContext) => context.player.pause(),
+        (context: Required<PlayerMachineContext, 'player'>) => context.player.pause(),
       ],
       on: {
         PLAY: {
@@ -51,7 +69,7 @@ const counterMachine = createMachine<PartialPlayerMachineContext>({
     },
     playing: {
       entry: [
-        (context: PlayerMachineContext) => context.player.play(),
+        (context: Required<PlayerMachineContext, 'player'>) => context.player.play(),
       ],
       on: {
         PAUSE: {
