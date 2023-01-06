@@ -37,6 +37,9 @@ const playerMachine = createMachine<PlayerMachineContext>({
         () => Howler.unload(),
       ],
     },
+    // @TODO
+    // - Stop current track
+    // - Find position (if any) for selected track
     ADD_TRACK: {
       target: "playing",
       actions: [
@@ -76,9 +79,15 @@ const playerMachine = createMachine<PlayerMachineContext>({
           target: "paused",
         },
         UPDATE_POSITION: {
+          // @TODO
+          // - Write to cache
+          // - Send to API
           actions: assign({ position: (_, event) => event.value }),
         },
         UPDATE_PROGRESS: {
+          // @TODO
+          // - Write to cache
+          // - Send to API
           actions: assign({ progress: (_, event) => event.value }),
         },
       },
