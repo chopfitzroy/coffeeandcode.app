@@ -27,7 +27,7 @@ const createInitialContext = (context?: PlayerMachineContext): PlayerMachineCont
   history: context?.history || [],
 });
 
-const counterMachine = createMachine<PlayerMachineContext>({
+const playerMachine = createMachine<PlayerMachineContext>({
   predictableActionArguments: true,
   context: createInitialContext(),
   initial: initialState,
@@ -80,10 +80,10 @@ const counterMachine = createMachine<PlayerMachineContext>({
   },
 });
 
-const counterSignal = signal(counterMachine.getInitialState(initialState));
+const playerSignal = signal(playerMachine.getInitialState(initialState));
 
-const counterService = interpret(counterMachine)
-  .onTransition((state) => counterSignal.value = state)
+const playerService = interpret(playerMachine)
+  .onTransition((state) => playerSignal.value = state)
   .start();
 
-export { counterService, counterSignal };
+export { playerService, playerSignal };

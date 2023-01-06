@@ -1,19 +1,9 @@
 import Header from "../islands/Header.tsx";
-import Counter from "../islands/Counter.tsx";
-import TrackControls from "../islands/TrackControls.tsx";
+import Tracks, { Track } from "../islands/Tracks.tsx";
 
 import { Head } from "$fresh/runtime.ts";
 import { pb } from "../utils/pocketbase.ts";
 import { HandlerContext, Handlers, PageProps } from "$fresh/server.ts";
-
-interface Track {
-  id: string;
-  title: string;
-  audio: string;
-  published: string;
-  description: string;
-  collectionId: string;
-}
 
 interface HomeProps {
   tracks: Track[];
@@ -28,8 +18,6 @@ export const handler: Handlers = {
   },
 };
 
-// @TODO
-// Create `Tracks` island
 export default function Home(props: PageProps<HomeProps>) {
   return (
     <>
@@ -53,9 +41,7 @@ export default function Home(props: PageProps<HomeProps>) {
           Welcome to `fresh`. Try updating this message in the
           ./routes/index.tsx file, and refresh.
         </p>
-        {props.data.tracks.map(track => <a href={`https://api.coffeeandcode.app/api/files/${track.collectionId}/${track.id}/${track.audio}`}>{track.title}</a>)}
-        <Counter start={3} />
-        <TrackControls start={5} />
+        <Tracks tracks={props.data.tracks} />
       </div>
     </>
   );
