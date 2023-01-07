@@ -1,7 +1,11 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
+import { writeTrackPosition } from "../utils/player.ts";
 import { assign, createMachine, interpret } from "xstate";
-import { getTrackPosition } from "../storage/playerHistory.ts";
+import {
+  getTrackPosition,
+  setTrackPosition,
+} from "../storage/playerHistory.ts";
 
 interface PlayerMachineContext {
   volume: number;
@@ -77,14 +81,13 @@ const playerMachine = createMachine<PlayerMachineContext>({
     },
     loading: {
       invoke: {
-        // @TODO
-        // - Check if the track is stored in the cache
-        // - If it is pull the position
         src: (context) => getTrackPosition(context.id),
         onDone: {
           target: "playing",
           actions: [
-            assign({ position: (_, event) => event.data }),
+            assign({
+              position: (_, event) => event.data,
+            }),
             createPlayerInstance,
           ],
         },
@@ -109,16 +112,16 @@ const playerMachine = createMachine<PlayerMachineContext>({
         PAUSE: {
           target: "paused",
         },
+        WRITE_POSITION: {
+          actions: (context, event) => writeTrackPosition(context.id, event.value)
+        },
         UPDATE_POSITION: {
-          // @TODO
-          // - Write to cache
-          // - Send to API
-          actions: assign({ position: (_, event) => event.value }),
+          actions: [
+            assign({ position: (_, event) => event.value }),
+            (context, event) => setTrackPosition(context.id, event.value),
+          ],
         },
         UPDATE_PROGRESS: {
-          // @TODO
-          // - Write to cache
-          // - Send to API
           actions: assign({ progress: (_, event) => event.value }),
         },
       },
@@ -130,17 +133,9 @@ const playerMachine = createMachine<PlayerMachineContext>({
         src: (context) => (send) => {
           // @NOTE
           // - Done as seperate intervals so we can use different interval times
-          const positionInterval = setInterval(() => {
-            const position = context.player.seek();
-            send({
-              type: "UPDATE_POSITION",
-              value: position,
-            });
-          }, 100);
-
           const progressInterval = setInterval(() => {
-            const value =
-              (context.player.seek() / context.player.duration()) * 100;
+            const value = (context.player.seek() / context.player.duration()) *
+              100;
             // - https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
             const progress = Math.round(value * 100 + Number.EPSILON) / 100;
             send({
@@ -149,9 +144,26 @@ const playerMachine = createMachine<PlayerMachineContext>({
             });
           }, 100);
 
+          const writePositionInterval = setInterval(() => {
+            const position = context.player.seek();
+            send({
+              type: "WRITE_POSITION",
+              value: position,
+            });
+          }, 5 * 1000);
+
+          const updatePositionInterval = setInterval(() => {
+            const position = context.player.seek();
+            send({
+              type: "UPDATE_POSITION",
+              value: position,
+            });
+          }, 100);
+
           return () => {
-            clearInterval(positionInterval);
             clearInterval(progressInterval);
+            clearInterval(writePositionInterval);
+            clearInterval(updatePositionInterval);
           };
         },
       },
