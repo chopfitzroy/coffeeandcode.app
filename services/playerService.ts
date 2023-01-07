@@ -1,6 +1,6 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
-import { writeTrackPosition } from "../utils/player.ts";
+import { sendTrackPosition } from "../utils/player.ts";
 import { assign, createMachine, interpret } from "xstate";
 import {
   getTrackPosition,
@@ -17,6 +17,8 @@ interface PlayerMachineContext {
 }
 
 const initialState = "starting";
+const contextInterval = 0.1; // In seconds
+const persistInterval = 5; // In seconds
 
 const createInitialContext = (
   context?: PlayerMachineContext,
@@ -112,17 +114,17 @@ const playerMachine = createMachine<PlayerMachineContext>({
         PAUSE: {
           target: "paused",
         },
-        WRITE_POSITION: {
-          actions: (context, event) => writeTrackPosition(context.id, event.value)
-        },
-        UPDATE_POSITION: {
+        UPDATE_CONTEXT: {
           actions: [
-            assign({ position: (_, event) => event.value }),
-            (context, event) => setTrackPosition(context.id, event.value),
+            assign({ progress: (_, event) => event.value.progress }),
+            assign({ position: (_, event) => event.value.position }),
           ],
         },
-        UPDATE_PROGRESS: {
-          actions: assign({ progress: (_, event) => event.value }),
+        PERSIST_POSITION: {
+          actions: [
+            (context, event) => setTrackPosition(context.id, event.value),
+            (context, event) => sendTrackPosition(context.id, event.value),
+          ],
         },
       },
       entry: [
@@ -131,39 +133,32 @@ const playerMachine = createMachine<PlayerMachineContext>({
       ],
       invoke: {
         src: (context) => (send) => {
-          // @NOTE
-          // - Done as seperate intervals so we can use different interval times
-          const progressInterval = setInterval(() => {
-            const value = (context.player.seek() / context.player.duration()) *
-              100;
-            // - https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
+          const persistTimer = setInterval(() => {
+            const position = context.player.seek();
+            send({
+              type: "PERSIST_POSITION",
+              value: position,
+            });
+          }, 1000 * persistInterval);
+
+          const contextTimer = setInterval(() => {
+            const position = context.player.seek();
+            const duration = context.player.duration();
+            const value = (position / duration) * 100;
             const progress = Math.round(value * 100 + Number.EPSILON) / 100;
-            send({
-              type: "UPDATE_PROGRESS",
-              value: progress,
-            });
-          }, 100);
 
-          const writePositionInterval = setInterval(() => {
-            const position = context.player.seek();
             send({
-              type: "WRITE_POSITION",
-              value: position,
+              type: "UPDATE_CONTEXT",
+              value: {
+                progress,
+                position,
+              },
             });
-          }, 5 * 1000);
-
-          const updatePositionInterval = setInterval(() => {
-            const position = context.player.seek();
-            send({
-              type: "UPDATE_POSITION",
-              value: position,
-            });
-          }, 100);
+          }, 1000 * contextInterval);
 
           return () => {
-            clearInterval(progressInterval);
-            clearInterval(writePositionInterval);
-            clearInterval(updatePositionInterval);
+            clearInterval(persistTimer);
+            clearInterval(contextTimer);
           };
         },
       },

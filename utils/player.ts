@@ -1,32 +1,61 @@
 import { pb } from "./pocketbase.ts";
 
-// const createTrackPosition = async (id: string, position: number) => {
-//   try {
-//     const data = {
-//           "user": "RELATION_RECORD_ID",
-//           "track": id,
-//           "progress": 123,
-//           "favourite": true
-//       };
-
-//     const record = await pb.collection('activities').create(data);
-//   } catch (err) {}
-// }
-
-// @TODO
-// - Rename `activities` to `history`
-const writeTrackPosition = async (id: string | undefined, position: number) => {
-  if (id === undefined) {
-    console.info(`Invalid ID "${id}" passed to "writeTrackPosition" aborting`);
-    return
-  }
+const createTrackPosition = async (id: string, position: number) => {
   try {
-    // `tack="${id}"`
-    const record = await pb.collection('activities').getFirstListItem();
-    console.log('Record', record);
-  } catch (err) {
-    console.info(`Failed to write ID "${id}" with position of "${position}" to server, aborting`, err);
-  }
-}
+    const user = pb.authStore.model.id;
+    const data = {
+      user: user,
+      track: id,
+      position,
+    };
 
-export { writeTrackPosition };
+    const record = await pb.collection("history").create(data);
+    return record;
+  } catch (err) {
+    console.info(
+      `Something went wrong when trying to create "${id}" at position "${position}" aborting`,
+      err,
+    );
+  }
+};
+
+const sendTrackPosition = async (id: string | undefined, position: number) => {
+  const loggedIn = pb.authStore.isValid;
+
+  if (loggedIn === false) {
+    console.info(`User is not logged in, no way to write to server, aborting`);
+    return;
+  }
+
+  if (id === undefined) {
+    console.info(`Invalid ID "${id}" passed to "sendTrackPosition" aborting`);
+    return;
+  }
+
+  try {
+    const user = pb.authStore.model.id;
+    const filter = `user="${user}" && track="${id}"`;
+
+    const { id: recordId, user: recordUser, track: recordTrack } = await pb.collection("history").getFirstListItem(filter);
+
+    const record = await pb.collection('history').update(recordId, {
+      position,
+      user: recordUser,
+      track: recordTrack
+    });
+
+    return record;
+  } catch (err) {
+    if (err.status !== 404) {
+      console.info(
+        `Something went wrong when trying to update "${id}" at position "${position}" aborting`,
+        err,
+      );
+      return;
+    }
+
+    return createTrackPosition(id, position);
+  }
+};
+
+export { sendTrackPosition };
