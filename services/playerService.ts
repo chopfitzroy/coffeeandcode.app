@@ -71,6 +71,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // - Check if user is logged in
       // - If they are fetch their history
       // - Write the history to the cache in the correct format
+      // - Additionally fetch their player preferences
+      // - Write their player preferences to the cache in the correct format
     },
     loading: {
       invoke: {
