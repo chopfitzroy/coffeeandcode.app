@@ -6,11 +6,12 @@ interface PlayerMachineContext {
   volume: number;
   position: number;
   progress: number;
+  id?: string;
   track?: string;
   player?: Howl;
 }
 
-const initialState = "hidden";
+const initialState = "starting";
 
 const createInitialContext = (
   context?: PlayerMachineContext,
@@ -24,44 +25,76 @@ const createInitialContext = (
   };
 };
 
+const createPlayerInstance = assign<PlayerMachineContext>({
+  player: (context) => {
+    return new Howl({
+      src: [context.track],
+      html5: true,
+      volume: context.volume,
+    });
+  },
+});
+
 const playerMachine = createMachine<PlayerMachineContext>({
   predictableActionArguments: true,
   context: createInitialContext(),
   initial: initialState,
   on: {
-    STOP: {
-      target: "hidden",
-      actions: [
-        assign((context) => createInitialContext(context)),
-        // Unload any hanging instances
-        () => Howler.unload(),
-      ],
-    },
     // @TODO
-    // - Stop current track
-    // - Find position (if any) for selected track
-    ADD_TRACK: {
-      target: "playing",
+    // - Add volume up event
+    // - Add volume down event
+    // - Add volume mute event
+    STOP: {
+      target: "stopped",
       actions: [
-        assign((_, event) => event.value),
-        assign({
-          player: (context) => {
-            return new Howl({
-              // @ts-expect-error: track has been set
-              src: [context.track],
-              html5: true,
-              volume: context.volume,
-            });
-          },
-        }),
+        () => Howler.unload(),
+        assign((context) => createInitialContext(context)),
       ],
     },
     LOAD_SETTINGS: {
-      actions: assign((_, event) => event.value),
+      actions: assign((context, event) => ({
+        ...context,
+        ...event.value,
+      })),
+    },
+    SELECT_TRACK_INFO: {
+      target: "fetching",
+      actions: [
+        () => Howler.unload(),
+        assign((context, event) => ({
+          ...context,
+          ...event.value,
+        })),
+      ],
     },
   },
   states: {
-    hidden: {},
+    starting: {
+      // @TODO
+      // - Invoke promise here
+      // - Check if user is logged in
+      // - If they are fetch their history
+      // - Write the history to the cache in the correct format
+    },
+    fetching: {
+      invoke: {
+        // @TODO
+        // - Check if the track is stored in the cache
+        // - If it is pull the position
+        src: async () => { throw new Error ('FORCE ERROR') },
+        onDone: {
+          target: "playing",
+          actions: [
+            assign({ position: (_, event) => event.data }),
+            createPlayerInstance,
+          ],
+        },
+        onError: {
+          target: "playing",
+          actions: createPlayerInstance,
+        },
+      },
+    },
     paused: {
       on: {
         PLAY: {
@@ -69,7 +102,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
         },
       },
       entry: [
-        // @ts-expect-error: player has been set
         (context) => context.player.pause(),
       ],
     },
@@ -92,9 +124,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
         },
       },
       entry: [
-        // @ts-expect-error: player has been set
         (context) => context.player.seek(context.position),
-        // @ts-expect-error: player has been set
         (context) => context.player.play(),
       ],
       invoke: {
@@ -102,7 +132,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
           // @NOTE
           // - Done as seperate intervals so we can use different interval times
           const positionInterval = setInterval(() => {
-            // @ts-expect-error: player has been set
             const position = context.player.seek();
             send({
               type: "UPDATE_POSITION",
@@ -112,7 +141,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
 
           const progressInterval = setInterval(() => {
             const value =
-              // @ts-expect-error: player has been set
               (context.player.seek() / context.player.duration()) * 100;
             // - https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
             const progress = Math.round(value * 100 + Number.EPSILON) / 100;
@@ -128,6 +156,10 @@ const playerMachine = createMachine<PlayerMachineContext>({
           };
         },
       },
+    },
+    stopped: {
+      // @NOTE
+      // - All events that would be caught here are global
     },
   },
 });
