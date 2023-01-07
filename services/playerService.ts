@@ -1,6 +1,7 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
 import { assign, createMachine, interpret } from "xstate";
+import { getTrackPosition } from "../storage/playerHistory.ts";
 
 interface PlayerMachineContext {
   volume: number;
@@ -79,7 +80,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
         // @TODO
         // - Check if the track is stored in the cache
         // - If it is pull the position
-        src: async () => { throw new Error ('FORCE ERROR') },
+        src: (context) => getTrackPosition(context.id),
         onDone: {
           target: "playing",
           actions: [
