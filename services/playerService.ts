@@ -40,10 +40,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
   context: createInitialContext(),
   initial: initialState,
   on: {
-    // @TODO
-    // - Add volume up event
-    // - Add volume down event
-    // - Add volume mute event
     STOP: {
       target: "stopped",
       actions: [
@@ -51,20 +47,20 @@ const playerMachine = createMachine<PlayerMachineContext>({
         assign((context) => createInitialContext(context)),
       ],
     },
-    LOAD_SETTINGS: {
-      actions: assign((context, event) => ({
-        ...context,
-        ...event.value,
-      })),
+    // @TODO
+    // - Add volume up event
+    // - Add volume down event
+    // - Add volume mute event
+    VOLUME_SET: {
+      actions: assign({ volume: (_, event) => event.value }),
     },
     SELECT_TRACK_INFO: {
-      target: "fetching",
+      target: "loading",
       actions: [
         () => Howler.unload(),
-        assign((context, event) => ({
-          ...context,
-          ...event.value,
-        })),
+        assign((context) => createInitialContext(context)),
+        assign({ id: (_, event) => event.value.id }),
+        assign({ track: (_, event) => event.value.track }),
       ],
     },
   },
@@ -76,7 +72,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // - If they are fetch their history
       // - Write the history to the cache in the correct format
     },
-    fetching: {
+    loading: {
       invoke: {
         // @TODO
         // - Check if the track is stored in the cache
