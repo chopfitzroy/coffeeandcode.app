@@ -8,12 +8,12 @@ import {
 } from "../storage/playerHistory.ts";
 
 interface PlayerMachineContext {
+  id: string;
+  track: string;
+  player: Howl;
   volume: number;
   position: number;
   progress: number;
-  id?: string;
-  track?: string;
-  player?: Howl;
 }
 
 const initialState = "starting";
@@ -29,7 +29,7 @@ const createInitialContext = (
     volume,
     position: 0,
     progress: 0,
-  };
+  } as PlayerMachineContext;
 };
 
 const createPlayerInstance = assign<PlayerMachineContext>({
@@ -82,6 +82,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // - Write their player preferences to the cache in the correct format
     },
     loading: {
+      // @TODO fix this
+      // @ts-expect-error: not sure what is causing this
       invoke: {
         src: (context) => getTrackPosition(context.id),
         onDone: {
