@@ -1,6 +1,8 @@
 # Coffee and code ☕
 
-### Usage
+This is the front end for [coffeeandcode.app](https://coffeeandcode.app) for the API setup please refer this [repo](https://github.com/chopfitzroy/api.coffeeandcode.app).
+
+### Usage 🚀
 
 Start the project:
 
@@ -8,13 +10,13 @@ Start the project:
 deno task start
 ```
 
-### Authentication
+### Authentication 🗝
 
 All authentication is done in the client (not SSR) originally we used an SSR implementation but the only way to share the auth store between the _server_ and the client was to use [disable `httpOnly`](https://github.com/pocketbase/js-sdk/issues/69).
 
 Given the nature of the app a shared auth store felt like overkill and increased the surface area for security concerns with no real value added.
 
-### Architecture
+### Architecture 🎁
 
 Built using the following technologies:
 
