@@ -2,6 +2,7 @@ import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
 import { sendTrackPosition } from "../utils/player.ts";
 import { assign, createMachine, interpret } from "xstate";
+import { setPlayerVolume } from "../storage/playerPreferences.ts";
 import {
   getTrackPosition,
   setTrackPosition,
@@ -17,14 +18,17 @@ interface PlayerMachineContext {
 }
 
 const initialState = "starting";
-const contextInterval = 0.1; // In seconds
 const persistInterval = 5; // In seconds
+const contextInterval = 0.1; // In seconds
 
 const createInitialContext = (
   context?: PlayerMachineContext,
 ): PlayerMachineContext => {
   const { volume = 0.5 } = context || {};
 
+  // @NOTE
+  // - It's infinitely easier if the machine thinks that all fields in the context are required
+  // - Casting this value to `PlayerMachineContext` helps to handle the XState type inference
   return {
     volume,
     position: 0,
@@ -54,12 +58,12 @@ const playerMachine = createMachine<PlayerMachineContext>({
         assign((context) => createInitialContext(context)),
       ],
     },
-    // @TODO
-    // - Add volume up event
-    // - Add volume down event
-    // - Add volume mute event
     VOLUME_SET: {
-      actions: assign({ volume: (_, event) => event.value }),
+      actions: [
+        assign({ volume: (_, event) => event.value }),
+        (_, event) => setPlayerVolume(event.value),
+        // @TODO persist volume to DB
+      ],
     },
     SELECT_TRACK_INFO: {
       target: "loading",
@@ -174,7 +178,11 @@ const playerMachine = createMachine<PlayerMachineContext>({
 
 const playerSignal = signal(playerMachine.getInitialState(initialState));
 
+// @TODO fix this
+// @ts-expect-error: not sure what is causing this
 const playerService = interpret(playerMachine)
+  // @TODO fix this
+  // @ts-expect-error: not sure what is causing this
   .onTransition((state) => playerSignal.value = state)
   .start();
 
