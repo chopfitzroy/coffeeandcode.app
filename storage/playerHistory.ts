@@ -1,11 +1,10 @@
 import localforage from "localforage";
 
-const getTrackPosition = async (id?: string) => {
-  if (window === undefined) {
+import { IS_BROWSER } from "$fresh/runtime.ts";
+
+const getTrackPosition = async (id: string) => {
+  if (!IS_BROWSER) {
     throw new Error("Running in server environment, aborting cache lookup");
-  }
-  if (id === undefined) {
-    throw new Error('Invalid ID passed to "getTrackPosition" aborting');
   }
 
   // Using 'track' prefix just to make cache more readable in dev tools
@@ -22,12 +21,7 @@ const getTrackPosition = async (id?: string) => {
   throw new Error(`No value found for "${id}" aborting`);
 };
 
-const setTrackPosition = async (id: string | undefined, position: number) => {
-  if (id === undefined) {
-    console.info('Invalid ID passed to "setTrackPosition" aborting');
-    return;
-  }
-
+const setTrackPosition = async (id: string, position: number) => {
   try {
     await localforage.setItem(`track-${id}`, position);
   } catch (err) {

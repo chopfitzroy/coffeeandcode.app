@@ -1,7 +1,8 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
-import { sendTrackPosition } from "../utils/player.ts";
 import { assign, createMachine, interpret } from "xstate";
+import { sendVolume } from "../utils/playerPreferences.ts"
+import { sendTrackPosition } from "../utils/playerHistory.ts";
 import { setPlayerVolume } from "../storage/playerPreferences.ts";
 import {
   getTrackPosition,
@@ -62,7 +63,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
       actions: [
         assign({ volume: (_, event) => event.value }),
         (_, event) => setPlayerVolume(event.value),
-        // @TODO persist volume to DB
+        (_, event) => sendVolume(event.value)
       ],
     },
     SELECT_TRACK_INFO: {

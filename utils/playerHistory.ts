@@ -4,9 +4,9 @@ const createTrackPosition = async (id: string, position: number) => {
   try {
     const user = pb.authStore.model.id;
     const data = {
-      user: user,
-      track: id,
+      user,
       position,
+      track: id,
     };
 
     const record = await pb.collection("history").create(data);
@@ -19,7 +19,7 @@ const createTrackPosition = async (id: string, position: number) => {
   }
 };
 
-const sendTrackPosition = async (id: string | undefined, position: number) => {
+const sendTrackPosition = async (id: string, position: number) => {
   const loggedIn = pb.authStore.isValid;
 
   if (loggedIn === false) {
@@ -27,21 +27,16 @@ const sendTrackPosition = async (id: string | undefined, position: number) => {
     return;
   }
 
-  if (id === undefined) {
-    console.info(`Invalid ID "${id}" passed to "sendTrackPosition" aborting`);
-    return;
-  }
-
   try {
     const user = pb.authStore.model.id;
     const filter = `user="${user}" && track="${id}"`;
 
-    const { id: recordId, user: recordUser, track: recordTrack } = await pb.collection("history").getFirstListItem(filter);
+    const { id: existingId, track } = await pb.collection("history").getFirstListItem(filter);
 
-    const record = await pb.collection('history').update(recordId, {
+    const record = await pb.collection('history').update(existingId, {
+      user,
+      track,
       position,
-      user: recordUser,
-      track: recordTrack
     });
 
     return record;
