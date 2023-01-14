@@ -86,6 +86,11 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // - Write the history to the cache in the correct format
       // - Additionally fetch their player preferences
       // - Write their player preferences to the cache in the correct format
+      // - Send the to the 'paused' state if there is data, otherwise the stopped state
+    },
+    stopped: {
+      // @NOTE
+      // - All events that would be caught here are global
     },
     loading: {
       // @TODO fix this
@@ -170,10 +175,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
           };
         },
       },
-    },
-    stopped: {
-      // @NOTE
-      // - All events that would be caught here are global
     },
   },
 });
