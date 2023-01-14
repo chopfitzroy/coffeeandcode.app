@@ -62,6 +62,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
     VOLUME_SET: {
       actions: [
         assign({ volume: (_, event) => event.value }),
+        (context, event) => context.player.volume(event.value),
         (_, event) => setPlayerVolume(event.value),
         (_, event) => sendVolume(event.value)
       ],
