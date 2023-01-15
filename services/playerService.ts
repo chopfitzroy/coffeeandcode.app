@@ -1,7 +1,8 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
+import { sortTracks } from "../utils/playerRestore.ts"
 import { assign, createMachine, interpret } from "xstate";
-import { sendVolume } from "../utils/playerPreferences.ts"
+import { sendVolume } from "../utils/playerPreferences.ts";
 import { sendTrackPosition } from "../utils/playerHistory.ts";
 import { setPlayerVolume } from "../storage/playerPreferences.ts";
 import {
@@ -64,7 +65,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
         assign({ volume: (_, event) => event.value }),
         (context, event) => context.player.volume(event.value),
         (_, event) => setPlayerVolume(event.value),
-        (_, event) => sendVolume(event.value)
+        (_, event) => sendVolume(event.value),
       ],
     },
     SELECT_TRACK_INFO: {
@@ -79,14 +80,23 @@ const playerMachine = createMachine<PlayerMachineContext>({
   },
   states: {
     starting: {
-      // @TODO
-      // - Invoke promise here
-      // - Check if user is logged in
-      // - If they are fetch their history
-      // - Write the history to the cache in the correct format
-      // - Additionally fetch their player preferences
-      // - Write their player preferences to the cache in the correct format
-      // - Send the to the 'paused' state if there is data, otherwise the stopped state
+      invoke: {
+        src: sortTracks,
+        onDone: {
+          target: "paused",
+          actions: [
+            createPlayerInstance,
+            // @TODO
+            // - Update ID
+            // - Update track
+            // - Update progress
+            // - Write to  cache
+          ],
+        },
+        onError: {
+          target: "stopped",
+        },
+      },
     },
     stopped: {
       // @NOTE

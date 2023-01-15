@@ -2,13 +2,31 @@ import localforage from "localforage";
 
 import { IS_BROWSER } from "$fresh/runtime.ts";
 
+const playerHistoryTable = localforage.createInstance({
+    name        : 'playerHistory',
+    storeName   : 'tableTracks',
+    description : 'Store the player history'
+});
+
+const getTracksFromCache = async () => {
+  if (!IS_BROWSER) {
+    throw new Error("Running in server environment, aborting cache lookup");
+  }
+
+  const keys = await playerHistoryTable.keys();
+
+  const values = keys.map(key => playerHistoryTable.getItem(key));
+
+  return await Promise.all(values);
+}
+
 const getTrackPosition = async (id: string) => {
   if (!IS_BROWSER) {
     throw new Error("Running in server environment, aborting cache lookup");
   }
 
   // Using 'track' prefix just to make cache more readable in dev tools
-  const value = await localforage.getItem(`track-${id}`);
+  const value = await playerHistoryTable.getItem(`track-${id}`);
 
   if (typeof value === "string") {
     return parseFloat(value);
@@ -23,7 +41,7 @@ const getTrackPosition = async (id: string) => {
 
 const setTrackPosition = async (id: string, position: number) => {
   try {
-    await localforage.setItem(`track-${id}`, position);
+    await playerHistoryTable.setItem(`track-${id}`, position);
   } catch (err) {
     console.info(
       `Error setting "${id}" with value "${position}" aborting`,
@@ -32,4 +50,4 @@ const setTrackPosition = async (id: string, position: number) => {
   }
 };
 
-export { getTrackPosition, setTrackPosition };
+export { getTracksFromCache, getTrackPosition, setTrackPosition };

@@ -12,7 +12,7 @@ const createVolume = async (volume: number) => {
     return record;
   } catch (err) {
     console.info(
-      `Something went wrong when trying to create "${id}" with volume "${volume}" aborting`,
+      `Something went wrong when trying to set volume, aborting`,
       err,
     );
   }

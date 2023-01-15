@@ -1,5 +1,21 @@
 import { pb } from "./pocketbase.ts";
 
+const getTracks = async () => {
+  const loggedIn = pb.authStore.isValid;
+
+  if (loggedIn === false) {
+    throw new Error("User not logged in, unable to fetch tracks, aborting");
+  }
+
+  const user = pb.authStore.model.id;
+  const filter = `user="${user}"`;
+
+  const records = await pb.collection("history")
+    .getFullList(200, { filter });
+
+  return records;
+};
+
 const createTrackPosition = async (id: string, position: number) => {
   try {
     const user = pb.authStore.model.id;
@@ -31,9 +47,10 @@ const sendTrackPosition = async (id: string, position: number) => {
     const user = pb.authStore.model.id;
     const filter = `user="${user}" && track="${id}"`;
 
-    const { id: existingId, track } = await pb.collection("history").getFirstListItem(filter);
+    const { id: existingId, track } = await pb.collection("history")
+      .getFirstListItem(filter);
 
-    const record = await pb.collection('history').update(existingId, {
+    const record = await pb.collection("history").update(existingId, {
       user,
       track,
       position,
@@ -53,4 +70,4 @@ const sendTrackPosition = async (id: string, position: number) => {
   }
 };
 
-export { sendTrackPosition };
+export { getTracks, sendTrackPosition };
