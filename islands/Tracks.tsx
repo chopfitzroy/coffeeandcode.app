@@ -22,7 +22,7 @@ const Tracks = ({ tracks }: TracksProps) => {
             type: "SELECT_TRACK_INFO",
             value: {
               id: track.id,
-              track: `https://api.coffeeandcode.app/api/files/${track.collectionId}/${track.id}/${track.audio}`,
+              url: `https://api.coffeeandcode.app/api/files/${track.collectionId}/${track.id}/${track.audio}`,
             },
           })}
         >

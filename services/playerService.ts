@@ -1,6 +1,6 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
-import { assign, createMachine, interpret } from "xstate";
+import { assign, createMachine, interpret, send } from "xstate";
 import { sendVolume } from "../utils/playerPreferences.ts";
 import { sendTrackPosition } from "../utils/playerHistory.ts";
 import { setPlayerVolume } from "../storage/playerPreferences.ts";
@@ -9,11 +9,21 @@ import {
   setTrackPosition,
 } from "../storage/playerHistory.ts";
 
+interface Track {
+  id: string;
+  url: string;
+  position: number;
+}
+
 interface PlayerMachineContext {
   id: string;
-  track: string;
+  url: string;
   player: Howl;
   volume: number;
+  // @TODO
+  // - Should this just be every track?
+  // - With a position of 0 if none defined?
+  history: Track[];
   position: number;
   progress: number;
 }
@@ -40,7 +50,7 @@ const createInitialContext = (
 const createPlayerInstance = assign<PlayerMachineContext>({
   player: (context) => {
     return new Howl({
-      src: [context.track],
+      src: [context.url],
       html5: true,
       volume: context.volume,
     });
@@ -73,7 +83,11 @@ const playerMachine = createMachine<PlayerMachineContext>({
         () => Howler.unload(),
         assign((context) => createInitialContext(context)),
         assign({ id: (_, event) => event.value.id }),
-        assign({ track: (_, event) => event.value.track }),
+        assign({ url: (_, event) => event.value.url }),
+        // @TODO
+        // - Fetch track position from history
+        // - Set position
+        // - Set progress
       ],
     },
   },
@@ -81,11 +95,16 @@ const playerMachine = createMachine<PlayerMachineContext>({
     populating: {
       invoke: {
         // @TODO
-        // - Fetch all tracks and preferences from API
-        // - Write to cache if valid values, otherwise use existing cache values
+        // - Fetch all tracks and preferences from API or cache
         src: () => new Promise((res) => res(true)),
         onDone: {
           target: "initializing",
+          actions: [
+            // assign({ volume: (_, event) => event.data.volume }),
+            // @TODO
+            // - Assign to `history`
+            // - Write to cache
+          ],
         },
         onError: {
           target: "stopped",
@@ -93,26 +112,21 @@ const playerMachine = createMachine<PlayerMachineContext>({
       },
     },
     initializing: {
-      invoke: {
+      // @TODO
+      // - Figure out which history track is the most recent
+      // - Assign it
+      entry: [
+        // assign({ id: (_, event) => event.data.id }),
+        // assign({ url: (_, event) => event.data.url }),
+        // assign({ position: (_, event) => event.data.position }),
         // @TODO
-        // - Fetch preferences from cache
-        // - Fetch most recently listened to item from cache
-        // - If invalid cache data abort
-        src: () => new Promise((res) => res(true)),
-        onDone: {
+        // - Update progress
+        createPlayerInstance,
+        send({ type: "INITIALIZED" }),
+      ],
+      on: {
+        INITIALIZED: {
           target: "paused",
-          actions: [
-            // assign({ id: (_, event) => event.data.id }),
-            // assign({ track: (_, event) => event.data.track }),
-            // assign({ volume: (_, event) => event.data.volume }),
-            // assign({ position: (_, event) => event.data.position }),
-            createPlayerInstance,
-            // @TODO
-            // - Update progress
-          ],
-        },
-        onError: {
-          target: "stopped",
         },
       },
     },
