@@ -1,6 +1,5 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
-import { sortTracks } from "../utils/playerRestore.ts"
 import { assign, createMachine, interpret } from "xstate";
 import { sendVolume } from "../utils/playerPreferences.ts";
 import { sendTrackPosition } from "../utils/playerHistory.ts";
@@ -19,7 +18,7 @@ interface PlayerMachineContext {
   progress: number;
 }
 
-const initialState = "starting";
+const initialState = "populating";
 const persistInterval = 5; // In seconds
 const contextInterval = 0.1; // In seconds
 
@@ -79,18 +78,37 @@ const playerMachine = createMachine<PlayerMachineContext>({
     },
   },
   states: {
-    starting: {
+    populating: {
       invoke: {
-        src: sortTracks,
+        // @TODO
+        // - Fetch all tracks and preferences from API
+        // - Write to cache if valid values, otherwise use existing cache values
+        src: () => new Promise((res) => res(true)),
+        onDone: {
+          target: "initializing",
+        },
+        onError: {
+          target: "stopped",
+        },
+      },
+    },
+    initializing: {
+      invoke: {
+        // @TODO
+        // - Fetch preferences from cache
+        // - Fetch most recently listened to item from cache
+        // - If invalid cache data abort
+        src: () => new Promise((res) => res(true)),
         onDone: {
           target: "paused",
           actions: [
+            // assign({ id: (_, event) => event.data.id }),
+            // assign({ track: (_, event) => event.data.track }),
+            // assign({ volume: (_, event) => event.data.volume }),
+            // assign({ position: (_, event) => event.data.position }),
             createPlayerInstance,
             // @TODO
-            // - Update ID
-            // - Update track
             // - Update progress
-            // - Write to  cache
           ],
         },
         onError: {
@@ -103,8 +121,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // - All events that would be caught here are global
     },
     loading: {
-      // @TODO fix this
-      // @ts-expect-error: not sure what is causing this
       invoke: {
         src: (context) => getTrackPosition(context.id),
         onDone: {
@@ -191,11 +207,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
 
 const playerSignal = signal(playerMachine.getInitialState(initialState));
 
-// @TODO fix this
-// @ts-expect-error: not sure what is causing this
 const playerService = interpret(playerMachine)
-  // @TODO fix this
-  // @ts-expect-error: not sure what is causing this
   .onTransition((state) => playerSignal.value = state)
   .start();
 
