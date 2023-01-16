@@ -1,6 +1,7 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
 import { assign, createMachine, interpret, send } from "xstate";
+import { restorePlayer } from '../utils/playerRestore.ts';
 import { sendVolume } from "../utils/playerPreferences.ts";
 import { sendTrackPosition } from "../utils/playerHistory.ts";
 import { setPlayerVolume } from "../storage/playerPreferences.ts";
@@ -94,15 +95,14 @@ const playerMachine = createMachine<PlayerMachineContext>({
   states: {
     populating: {
       invoke: {
-        // @TODO
-        // - Fetch all tracks and preferences from API or cache
-        src: () => new Promise((res) => res(true)),
+        src: restorePlayer,
         onDone: {
           target: "initializing",
           actions: [
-            // assign({ volume: (_, event) => event.data.volume }),
+            assign({ volume: (_, event) => event.data.volume }),
+            assign({ history: (_, event) => event.data.tracks }),
+            (_, event) => setPlayerVolume(event.data.volume)
             // @TODO
-            // - Assign to `history`
             // - Write to cache
           ],
         },

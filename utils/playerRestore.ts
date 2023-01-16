@@ -9,12 +9,21 @@ const restoreTracks = () => {
   }
 };
 
-const sortTracks = async () => {
-  const tracks = await restoreTracks();
+const restoreVolume = () => {
   // @TODO
-  // - Get by `updated` stamp
-  const [first] = tracks;
-  return first;
+  // - Wire this up
+  return new Promise (res => res(true));
 }
 
-export { sortTracks };
+const restorePlayer = async () => {
+  const tracks = await restoreTracks();
+  const volume = await restoreVolume();
+
+  return {
+    tracks,
+    volume
+  }
+}
+
+
+export { restorePlayer };
