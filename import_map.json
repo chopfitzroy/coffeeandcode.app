@@ -12,6 +12,7 @@
     "pocketbase": "https://esm.sh/pocketbase@0.9.1",
     "xstate": "https://esm.sh/xstate@4.35.1",
     "howler": "https://esm.sh/howler@2.2.3",
-    "localforage": "https://esm.sh/localforage@1.10.0"
+    "localforage": "https://esm.sh/localforage@1.10.0",
+    "date-fns": "https://esm.sh/date-fns@2.29.3"
   }
 }

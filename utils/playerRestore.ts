@@ -3,6 +3,10 @@ import { getVolume } from "./playerPreferences.ts";
 import { getTracksFromCache } from "../storage/playerHistory.ts";
 import { getVolumeFromCache } from "../storage/playerPreferences.ts";
 
+// @TODO
+// - Right now this is just getting the history
+// - We need to get the history and all available tracks and merge the two together
+
 const restoreTracks = () => {
   try {
     return getTracks();

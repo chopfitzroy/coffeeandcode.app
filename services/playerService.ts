@@ -1,7 +1,8 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
+import { isAfter, parseJSON } from "date-fns";
 import { assign, createMachine, interpret, send } from "xstate";
-import { restorePlayer } from '../utils/playerRestore.ts';
+import { restorePlayer } from "../utils/playerRestore.ts";
 import { sendVolume } from "../utils/playerPreferences.ts";
 import { sendTrackPosition } from "../utils/playerHistory.ts";
 import { setPlayerVolume } from "../storage/playerPreferences.ts";
@@ -11,9 +12,14 @@ import {
   setTracksToCache,
 } from "../storage/playerHistory.ts";
 
+// @TODO
+// - Rename to `History`
 export interface Track {
   id: string;
   url: string;
+  track: string;
+  created: string;
+  updated: string;
   position: number;
 }
 
@@ -59,6 +65,24 @@ const createPlayerInstance = assign<PlayerMachineContext>({
   },
 });
 
+const getTrackById = (tracks: Track[], id: string) => {
+  const track = tracks.find((item) => item.track === id);
+  if (track === undefined) {
+    throw new Error(`No track found with ID "${id}", aborting`);
+  }
+  return track;
+};
+
+const getLatestTrack = (tracks: Track[]) => {
+  const [latest] = tracks.sort((a, b) => {
+    return isAfter(parseJSON(a.updated), parseJSON(b.updated)) ? 1 : -1;
+  });
+  if (latest === undefined) {
+    throw new Error(`Unable to find latest track, aborting`);
+  }
+  return latest;
+};
+
 const playerMachine = createMachine<PlayerMachineContext>({
   predictableActionArguments: true,
   context: createInitialContext(),
@@ -84,6 +108,15 @@ const playerMachine = createMachine<PlayerMachineContext>({
       actions: [
         () => Howler.unload(),
         assign((context) => createInitialContext(context)),
+        // assign((context, event) => {
+        //   const track = getTrackById(context.history, event.value.id);
+
+        //   return {
+        //     ...context,
+        //     id: track.id,
+        //     url: track.url,
+        //   };
+        // }),
         assign({ id: (_, event) => event.value.id }),
         assign({ url: (_, event) => event.value.url }),
         // @TODO
@@ -103,7 +136,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
             assign({ volume: (_, event) => event.data.volume }),
             assign({ history: (_, event) => event.data.tracks }),
             (_, event) => setPlayerVolume(event.data.volume),
-            (_, event) => setTracksToCache(event.data.tracks)
+            (_, event) => setTracksToCache(event.data.tracks),
           ],
         },
         onError: {
