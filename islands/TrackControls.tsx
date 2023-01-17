@@ -10,7 +10,7 @@ const updateVolume = (event: unknown) => {
 }
 
 const TrackControls = () => {
-
+  const volume = playerSignal.value.context.volume * 100;
   return (
     <div>
       <p>{playerSignal.value.value}</p>
@@ -19,7 +19,7 @@ const TrackControls = () => {
       </div>
       <button onClick={() => playerService.send('PLAY')}>Play</button>
       <button onClick={() => playerService.send('PAUSE')}>Pause</button>
-      <input type="range" name="volume" min="0" max="100" onChange={updateVolume} />
+      <input type="range" name="volume" min="0" max="100" value={volume}  onChange={updateVolume} />
     </div>
   );
 };
