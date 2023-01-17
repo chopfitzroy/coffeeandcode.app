@@ -1,11 +1,12 @@
 import localforage from "localforage";
 
 import { IS_BROWSER } from "$fresh/runtime.ts";
+import { Track } from "../services/playerService.ts";
 
 const playerHistoryTable = localforage.createInstance({
-    name        : 'playerHistory',
-    storeName   : 'tableTracks',
-    description : 'Store the player history'
+  name: "playerHistory",
+  storeName: "tableTracks",
+  description: "Store the player history",
 });
 
 const getTracksFromCache = async () => {
@@ -15,10 +16,22 @@ const getTracksFromCache = async () => {
 
   const keys = await playerHistoryTable.keys();
 
-  const values = keys.map(key => playerHistoryTable.getItem(key));
+  const values = keys.map((key) => playerHistoryTable.getItem(key));
 
   return await Promise.all(values);
-}
+};
+
+const setTracksToCache = async (tracks: Track[]) => {
+  if (!IS_BROWSER) {
+    throw new Error("Running in server environment, aborting cache lookup");
+  }
+
+  const tasks = tracks.map((track) =>
+    playerHistoryTable.setItem(`track-${track.id}`, track.position)
+  );
+
+  return await Promise.all(tasks);
+};
 
 const getTrackPosition = async (id: string) => {
   if (!IS_BROWSER) {
@@ -50,4 +63,4 @@ const setTrackPosition = async (id: string, position: number) => {
   }
 };
 
-export { getTracksFromCache, getTrackPosition, setTrackPosition };
+export { getTrackPosition, getTracksFromCache, setTracksToCache, setTrackPosition };

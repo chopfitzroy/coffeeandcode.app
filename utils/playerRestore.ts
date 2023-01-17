@@ -1,5 +1,7 @@
 import { getTracks } from "./playerHistory.ts";
+import { getVolume } from "./playerPreferences.ts";
 import { getTracksFromCache } from "../storage/playerHistory.ts";
+import { getVolumeFromCache } from "../storage/playerPreferences.ts";
 
 const restoreTracks = () => {
   try {
@@ -10,9 +12,11 @@ const restoreTracks = () => {
 };
 
 const restoreVolume = () => {
-  // @TODO
-  // - Wire this up
-  return new Promise (res => res(true));
+  try {
+    return getVolume();
+  } catch (_) {
+    return getVolumeFromCache();
+  }
 }
 
 const restorePlayer = async () => {

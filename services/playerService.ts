@@ -8,9 +8,10 @@ import { setPlayerVolume } from "../storage/playerPreferences.ts";
 import {
   getTrackPosition,
   setTrackPosition,
+  setTracksToCache,
 } from "../storage/playerHistory.ts";
 
-interface Track {
+export interface Track {
   id: string;
   url: string;
   position: number;
@@ -101,9 +102,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
           actions: [
             assign({ volume: (_, event) => event.data.volume }),
             assign({ history: (_, event) => event.data.tracks }),
-            (_, event) => setPlayerVolume(event.data.volume)
-            // @TODO
-            // - Write to cache
+            (_, event) => setPlayerVolume(event.data.volume),
+            (_, event) => setTracksToCache(event.data.tracks)
           ],
         },
         onError: {
@@ -135,6 +135,9 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // - All events that would be caught here are global
     },
     loading: {
+      // @TODO
+      // - This will no longer be a promise...
+      // - It will just pull directly from the context
       invoke: {
         src: (context) => getTrackPosition(context.id),
         onDone: {

@@ -1,11 +1,26 @@
 import { pb } from "./pocketbase.ts";
 
+const getVolume = async () => {
+  const loggedIn = pb.authStore.isValid;
+
+  if (loggedIn === false) {
+    console.info(`User is not logged in, no way to write to server, aborting`);
+    return;
+  }
+
+  const user = pb.authStore.model.id;
+  const filter = `user="${user}"`;
+  const { volume } = await pb.collection("preferences").getFirstListItem(filter);
+
+  return volume;
+};
+
 const createVolume = async (volume: number) => {
   try {
     const user = pb.authStore.model.id;
     const data = {
       user,
-      volume
+      volume,
     };
 
     const record = await pb.collection("preferences").create(data);
@@ -30,9 +45,10 @@ const sendVolume = async (volume: number) => {
     const user = pb.authStore.model.id;
     const filter = `user="${user}"`;
 
-    const { id: existingId } = await pb.collection("preferences").getFirstListItem(filter);
+    const { id: existingId } = await pb.collection("preferences")
+      .getFirstListItem(filter);
 
-    const record = await pb.collection('preferences').update(existingId, {
+    const record = await pb.collection("preferences").update(existingId, {
       user,
       volume,
     });
@@ -51,4 +67,4 @@ const sendVolume = async (volume: number) => {
   }
 };
 
-export { sendVolume };
+export { getVolume, sendVolume };

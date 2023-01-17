@@ -6,6 +6,10 @@ const playerPreferencesTable = localforage.createInstance({
     description : 'Store the player preferences'
 });
 
+const getVolumeFromCache = () => {
+	return playerPreferencesTable.getItem('playerVolume');
+}
+
 const setPlayerVolume = async (volume: number) => {
 	try {
 		await playerPreferencesTable.setItem('playerVolume', volume);
@@ -15,5 +19,6 @@ const setPlayerVolume = async (volume: number) => {
 }
 
 export {
+	getVolumeFromCache,
 	setPlayerVolume
 }
