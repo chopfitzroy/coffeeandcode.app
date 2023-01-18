@@ -43,13 +43,14 @@ const contextInterval = 0.1; // In seconds
 const createInitialContext = (
   context?: PlayerMachineContext,
 ): PlayerMachineContext => {
-  const { volume = 0.5 } = context || {};
+  const { volume = 0.5, history = [] } = context || {};
 
   // @NOTE
   // - It's infinitely easier if the machine thinks that all fields in the context are required
   // - Casting this value to `PlayerMachineContext` helps to handle the XState type inference
   return {
     volume,
+    history,
     position: 0,
     progress: 0,
   } as PlayerMachineContext;
@@ -110,7 +111,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
         assign((context) => createInitialContext(context)),
         // assign((context, event) => {
         //   const track = getTrackById(context.history, event.value.id);
-
         //   return {
         //     ...context,
         //     id: track.id,
@@ -119,10 +119,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
         // }),
         assign({ id: (_, event) => event.value.id }),
         assign({ url: (_, event) => event.value.url }),
-        // @TODO
-        // - Fetch track position from history
-        // - Set position
-        // - Set progress
       ],
     },
   },
@@ -133,6 +129,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
         onDone: {
           target: "initializing",
           actions: [
+            (_, event) => console.log(event),
             assign({ volume: (_, event) => event.data.volume }),
             assign({ history: (_, event) => event.data.tracks }),
             (_, event) => setPlayerVolume(event.data.volume),
@@ -140,14 +137,15 @@ const playerMachine = createMachine<PlayerMachineContext>({
           ],
         },
         onError: {
-          target: "stopped",
+          target: "failure",
         },
       },
     },
+    // @TODO
+    // - Should this be named `searching`
     initializing: {
       // @TODO
       // - Figure out which history track is the most recent
-      // - Assign it
       entry: [
         // assign({ id: (_, event) => event.data.id }),
         // assign({ url: (_, event) => event.data.url }),
@@ -163,6 +161,11 @@ const playerMachine = createMachine<PlayerMachineContext>({
         },
       },
     },
+    failure: {
+      type: "final",
+      // @TODO
+      // - Tell the user to refresh the page
+    },
     stopped: {
       // @NOTE
       // - All events that would be caught here are global
@@ -170,7 +173,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
     loading: {
       // @TODO
       // - This will no longer be a promise...
-      // - It will just pull directly from the context
+      // - It will be removed once `initializing` is working
       invoke: {
         src: (context) => getTrackPosition(context.id),
         onDone: {
@@ -216,6 +219,11 @@ const playerMachine = createMachine<PlayerMachineContext>({
           ],
         },
       },
+      exit: [
+        // @TODO
+        // - Persist track position to the context
+        // - Storage is already taken care of
+      ],
       entry: [
         (context) => context.player.seek(context.position),
         (context) => context.player.play(),
