@@ -14,6 +14,10 @@ const getTracksFromCache = async () => {
     throw new Error("Running in server environment, aborting cache lookup");
   }
 
+  if (!IS_BROWSER) {
+    console.info("Cannot use cache in server environment, aborting");
+    return;
+  }
   const keys = await playerHistoryTable.keys();
 
   const values = keys.map(async (key) => ({
@@ -26,7 +30,8 @@ const getTracksFromCache = async () => {
 
 const setTracksToCache = async (tracks: Track[]) => {
   if (!IS_BROWSER) {
-    throw new Error("Running in server environment, aborting cache lookup");
+    console.info("Cannot use cache in server environment, aborting");
+    return;
   }
 
   const tasks = tracks.map((track) =>
@@ -37,6 +42,11 @@ const setTracksToCache = async (tracks: Track[]) => {
 };
 
 const setTrackPosition = async (id: string, position: number) => {
+  if (!IS_BROWSER) {
+    console.info("Cannot use cache in server environment, aborting");
+    return;
+  }
+
   try {
     await playerHistoryTable.setItem(id, position);
   } catch (err) {

@@ -103,6 +103,9 @@ const playerMachine = createMachine<PlayerMachineContext>({
   context: createInitialContext(),
   initial: initialState,
   on: {
+    PLAY: {
+      target: "playing",
+    },
     STOP: {
       target: "stopped",
       actions: [
@@ -122,9 +125,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
       target: "playing",
       actions: [
         () => Howler.unload(),
-        assign((context) =>createInitialContext(context)),
+        assign((context) => createInitialContext(context)),
         getTrackById,
-        createPlayerInstance,
       ],
     },
   },
@@ -143,17 +145,16 @@ const playerMachine = createMachine<PlayerMachineContext>({
             assign({ volume: (_, event) => event.data.volume }),
             assign({ history: (_, event) => event.data.tracks }),
             getLatestTrack,
-            createPlayerInstance,
             (_, event) => setPlayerVolume(event.data.volume),
             (_, event) => setTracksToCache(event.data.tracks),
           ],
         },
         onError: {
-          target: "failure",
+          target: "failed",
         },
       },
     },
-    failure: {
+    failed: {
       type: "final",
       // @TODO
       // - Tell the user to refresh the page
@@ -163,14 +164,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // - All events that would be caught here are global
     },
     paused: {
-      on: {
-        PLAY: {
-          target: "playing",
-        },
-      },
-      entry: [
-        (context) => context.player.pause(),
-      ],
+      // @NOTE
+      // - All events that would be caught here are global
     },
     playing: {
       on: {
@@ -191,11 +186,16 @@ const playerMachine = createMachine<PlayerMachineContext>({
         },
       },
       exit: [
+        // @NOTE
+        // - Unfortunately this needs to be done here
+        // - This is to get around audio context issues on page load
+        (context) => context.player.pause(),
         // @TODO
         // - Persist track position to the context
         // - Storage is already taken care of
       ],
       entry: [
+        createPlayerInstance,
         (context) => context.player.seek(context.position),
         (context) => context.player.play(),
       ],
