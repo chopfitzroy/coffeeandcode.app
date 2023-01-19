@@ -1,13 +1,12 @@
 import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
 import { isAfter, parseJSON } from "date-fns";
-import { assign, createMachine, interpret, send } from "xstate";
 import { restorePlayer } from "../utils/playerRestore.ts";
 import { sendVolume } from "../utils/playerPreferences.ts";
 import { sendTrackPosition } from "../utils/playerHistory.ts";
 import { setPlayerVolume } from "../storage/playerPreferences.ts";
+import { AnyEventObject, assign, createMachine, interpret } from "xstate";
 import {
-  getTrackPosition,
   setTrackPosition,
   setTracksToCache,
 } from "../storage/playerHistory.ts";
@@ -28,9 +27,6 @@ interface PlayerMachineContext {
   url: string;
   player: Howl;
   volume: number;
-  // @TODO
-  // - Should this just be every track?
-  // - With a position of 0 if none defined?
   history: Track[];
   position: number;
   progress: number;
@@ -66,23 +62,41 @@ const createPlayerInstance = assign<PlayerMachineContext>({
   },
 });
 
-const getTrackById = (tracks: Track[], id: string) => {
-  const track = tracks.find((item) => item.track === id);
-  if (track === undefined) {
-    throw new Error(`No track found with ID "${id}", aborting`);
-  }
-  return track;
-};
+const getTrackById = assign<PlayerMachineContext>(
+  (context, event: AnyEventObject) => {
+    const track = context.history.find((item) => item.id === event.value.id);
 
-const getLatestTrack = (tracks: Track[]) => {
-  const [latest] = tracks.sort((a, b) => {
-    return isAfter(parseJSON(a.updated), parseJSON(b.updated)) ? 1 : -1;
-  });
-  if (latest === undefined) {
-    throw new Error(`Unable to find latest track, aborting`);
-  }
-  return latest;
-};
+    if (track === undefined) {
+      throw new Error(`No track found with ID "${event.value.id}", aborting`);
+    }
+
+    return {
+      ...context,
+      id: track.id,
+      url: track.url,
+      position: track.position,
+    };
+  },
+);
+
+const getLatestTrack = assign<PlayerMachineContext>(
+  (context) => {
+    const [latest] = context.history.sort((a, b) => {
+      return isAfter(parseJSON(a.updated), parseJSON(b.updated)) ? 1 : -1;
+    });
+
+    if (latest === undefined) {
+      throw new Error(`Unable to find latest track, aborting`);
+    }
+
+    return {
+      ...context,
+      id: latest.id,
+      url: latest.url,
+      position: latest.position,
+    };
+  },
+);
 
 const playerMachine = createMachine<PlayerMachineContext>({
   predictableActionArguments: true,
@@ -98,66 +112,44 @@ const playerMachine = createMachine<PlayerMachineContext>({
     },
     VOLUME_SET: {
       actions: [
-        assign({ volume: (_, event) => event.value }),
         (context, event) => context.player.volume(event.value),
+        assign({ volume: (_, event) => event.value }),
         (_, event) => setPlayerVolume(event.value),
         (_, event) => sendVolume(event.value),
       ],
     },
     SELECT_TRACK_INFO: {
-      target: "loading",
+      target: "playing",
       actions: [
         () => Howler.unload(),
-        assign((context) => createInitialContext(context)),
-        // assign((context, event) => {
-        //   const track = getTrackById(context.history, event.value.id);
-        //   return {
-        //     ...context,
-        //     id: track.id,
-        //     url: track.url,
-        //   };
-        // }),
-        assign({ id: (_, event) => event.value.id }),
-        assign({ url: (_, event) => event.value.url }),
+        assign((context) =>createInitialContext(context)),
+        getTrackById,
+        createPlayerInstance,
       ],
     },
   },
   states: {
+    // @NOTE
+    // - Unfortunately it's impossible to dynamically get the progress here
+    // - This is because we can't read the duration of the audio file on page load
+    // - https://github.com/goldfire/howler.js/issues/1154
+    // - To get around this we persist the progress as well as the duration
     populating: {
       invoke: {
         src: restorePlayer,
         onDone: {
-          target: "initializing",
+          target: "paused",
           actions: [
-            (_, event) => console.log(event),
             assign({ volume: (_, event) => event.data.volume }),
             assign({ history: (_, event) => event.data.tracks }),
+            getLatestTrack,
+            createPlayerInstance,
             (_, event) => setPlayerVolume(event.data.volume),
             (_, event) => setTracksToCache(event.data.tracks),
           ],
         },
         onError: {
           target: "failure",
-        },
-      },
-    },
-    // @TODO
-    // - Should this be named `searching`
-    initializing: {
-      // @TODO
-      // - Figure out which history track is the most recent
-      entry: [
-        // assign({ id: (_, event) => event.data.id }),
-        // assign({ url: (_, event) => event.data.url }),
-        // assign({ position: (_, event) => event.data.position }),
-        // @TODO
-        // - Update progress
-        createPlayerInstance,
-        send({ type: "INITIALIZED" }),
-      ],
-      on: {
-        INITIALIZED: {
-          target: "paused",
         },
       },
     },
@@ -169,27 +161,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
     stopped: {
       // @NOTE
       // - All events that would be caught here are global
-    },
-    loading: {
-      // @TODO
-      // - This will no longer be a promise...
-      // - It will be removed once `initializing` is working
-      invoke: {
-        src: (context) => getTrackPosition(context.id),
-        onDone: {
-          target: "playing",
-          actions: [
-            assign({
-              position: (_, event) => event.data,
-            }),
-            createPlayerInstance,
-          ],
-        },
-        onError: {
-          target: "playing",
-          actions: createPlayerInstance,
-        },
-      },
     },
     paused: {
       on: {

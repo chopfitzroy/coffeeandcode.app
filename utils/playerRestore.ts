@@ -1,3 +1,4 @@
+import { trap } from "./trap.ts";
 import { pb } from "./pocketbase.ts";
 import { getTracks } from "./playerHistory.ts";
 import { getVolume } from "./playerPreferences.ts";
@@ -5,16 +6,16 @@ import { getTracksFromCache } from "../storage/playerHistory.ts";
 import { getVolumeFromCache } from "../storage/playerPreferences.ts";
 import { Track } from "../services/playerService.ts";
 
-// @TODO
-// - Right now this is just getting the history
-// - We need to get the history and all available tracks and merge the two together
+const restoreHistory = async () => {
+  const [realHistory] = await trap(getTracks)();
 
-const restoreHistory = () => {
-  try {
-    return getTracks();
-  } catch (_) {
-    return getTracksFromCache();
+  if (realHistory !== undefined) {
+    return realHistory;
   }
+
+  const [cachedHistory] = await trap(getTracksFromCache)();
+
+  return cachedHistory || [];
 };
 
 const restoreTracks = async () => {
@@ -25,24 +26,32 @@ const restoreTracks = async () => {
     }),
   ]);
 
-  return tracks.map(track => {
-    const match = history.find(item => {
+  return tracks.map((track) => {
+    const match = history.find((item) => {
       return item.track === track.id;
     });
 
+    const url = `https://api.coffeeandcode.app/api/files/${track.collectionId}/${track.id}/${track.audio}`;
+    const position = match ? match.position : 0;
+    
     return {
       ...track,
-      position: match.position
-    }
-  })
+      url,
+      position
+    };
+  });
 };
 
-const restoreVolume = () => {
-  try {
-    return getVolume();
-  } catch (_) {
-    return getVolumeFromCache();
+const restoreVolume = async () => {
+  const [realVolume] = await trap(getVolume)();
+
+  if (realVolume !== undefined) {
+    return realVolume;
   }
+
+  const [cachedVolume] = await trap(getVolumeFromCache)();
+
+  return cachedVolume ?? 0.5;
 };
 
 const restorePlayer = async () => {

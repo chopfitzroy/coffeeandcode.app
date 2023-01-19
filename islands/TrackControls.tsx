@@ -9,17 +9,19 @@ const updateVolume = (event: unknown) => {
   });
 }
 
+// <div class="bg-gray-100">
+//   <div class="h-2 bg-black" style={{ width: `${playerSignal.value.context.progress}%` }}></div>
+// </div>
+
 const TrackControls = () => {
   const volume = playerSignal.value.context.volume * 100;
   return (
     <div>
       <p>{playerSignal.value.value}</p>
-      <div class="bg-gray-100">
-        <div class="h-2 bg-black" style={{ width: `${playerSignal.value.context.progress}%` }}></div>
-      </div>
+      <input type="range" name="playback" min="0" max="100" value={playerSignal.value.context.progress} />
       <button onClick={() => playerService.send('PLAY')}>Play</button>
       <button onClick={() => playerService.send('PAUSE')}>Pause</button>
-      <input type="range" name="volume" min="0" max="100" value={volume}  onChange={updateVolume} />
+      <input type="range" name="volume" min="0" max="100" value={volume} onChange={updateVolume} />
     </div>
   );
 };
