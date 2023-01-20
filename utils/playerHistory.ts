@@ -1,6 +1,6 @@
 import { pb } from "./pocketbase.ts";
 
-const getTracks = async () => {
+const fetchTracks = async () => {
   const loggedIn = pb.authStore.isValid;
 
   if (loggedIn === false) {
@@ -35,7 +35,7 @@ const createTrackPosition = async (id: string, position: number) => {
   }
 };
 
-const sendTrackPosition = async (id: string, position: number) => {
+const persistTrackPosition = async (id: string, position: number) => {
   const loggedIn = pb.authStore.isValid;
 
   if (loggedIn === false) {
@@ -70,4 +70,4 @@ const sendTrackPosition = async (id: string, position: number) => {
   }
 };
 
-export { getTracks, sendTrackPosition };
+export { fetchTracks, persistTrackPosition };

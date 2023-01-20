@@ -8,11 +8,11 @@ const playerPreferencesTable = localforage.createInstance({
     description : 'Store the player preferences'
 });
 
-const getVolumeFromCache = () => {
+const getCachedVolume = () => {
 	return playerPreferencesTable.getItem('playerVolume');
 }
 
-const setPlayerVolume = async (volume: number) => {
+const cacheVolume = async (volume: number) => {
   if (!IS_BROWSER) {
     console.info("Cannot use cache in server environment, aborting");
     return;
@@ -26,6 +26,6 @@ const setPlayerVolume = async (volume: number) => {
 }
 
 export {
-	getVolumeFromCache,
-	setPlayerVolume
+	getCachedVolume,
+	cacheVolume
 }

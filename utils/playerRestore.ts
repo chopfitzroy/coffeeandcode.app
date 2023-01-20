@@ -1,19 +1,18 @@
 import { trap } from "./trap.ts";
 import { pb } from "./pocketbase.ts";
-import { getTracks } from "./playerHistory.ts";
-import { getVolume } from "./playerPreferences.ts";
-import { getTracksFromCache } from "../storage/playerHistory.ts";
-import { getVolumeFromCache } from "../storage/playerPreferences.ts";
-import { Track } from "../services/playerService.ts";
+import { fetchTracks } from "./playerHistory.ts";
+import { History } from "../services/playerService.ts";
+import { getCachedTracks } from "../storage/playerHistory.ts";
+import { getCachedVolume } from "../storage/playerPreferences.ts";
 
 const restoreHistory = async () => {
-  const [realHistory] = await trap(getTracks)();
+  const [realHistory] = await trap(fetchTracks)();
 
   if (realHistory !== undefined) {
     return realHistory;
   }
 
-  const [cachedHistory] = await trap(getTracksFromCache)();
+  const [cachedHistory] = await trap(getCachedTracks)();
 
   return cachedHistory || [];
 };
@@ -21,7 +20,7 @@ const restoreHistory = async () => {
 const restoreTracks = async () => {
   const [history, tracks] = await Promise.all([
     restoreHistory(),
-    pb.collection("tracks").getFullList<Track>(50, {
+    pb.collection("tracks").getFullList<History>(50, {
       sort: "-published",
     }),
   ]);
@@ -43,14 +42,7 @@ const restoreTracks = async () => {
 };
 
 const restoreVolume = async () => {
-  const [realVolume] = await trap(getVolume)();
-
-  if (realVolume !== undefined) {
-    return realVolume;
-  }
-
-  const [cachedVolume] = await trap(getVolumeFromCache)();
-
+  const [cachedVolume] = await trap(getCachedVolume)();
   return cachedVolume ?? 0.5;
 };
 

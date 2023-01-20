@@ -1,4 +1,6 @@
-import { playerSignal, playerService } from "../services/playerService.ts";
+import { playerSignal, playerService, getCurrentPlayable } from "../services/playerService.ts";
+
+const visibleStates = ['paused', 'playing'];
 
 const updateVolume = (event: unknown) => {
   const value = event.target.value as number;
@@ -9,19 +11,21 @@ const updateVolume = (event: unknown) => {
   });
 }
 
-// <div class="bg-gray-100">
-//   <div class="h-2 bg-black" style={{ width: `${playerSignal.value.context.progress}%` }}></div>
-// </div>
-
 const TrackControls = () => {
+  if (!visibleStates.includes(playerSignal.value.value as string)) {
+    return <div></div>;
+  }
+  
   const volume = playerSignal.value.context.volume * 100;
+  const current = getCurrentPlayable(playerSignal.value.context);
+
   return (
     <div>
       <p>{playerSignal.value.value}</p>
-      <input type="range" name="playback" min="0" max="100" value={playerSignal.value.context.progress} />
+      <input type="range" name="playback" min="0" max="100" value={current.progress} />
       <button onClick={() => playerService.send('PLAY')}>Play</button>
       <button onClick={() => playerService.send('PAUSE')}>Pause</button>
-      <input type="range" name="volume" min="0" max="100" value={volume} onChange={updateVolume} />
+      <input type="range" name="volume" min="0" max="100" value={volume} onInput={updateVolume} />
     </div>
   );
 };

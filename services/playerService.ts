@@ -2,34 +2,40 @@ import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
 import { isAfter, parseJSON } from "date-fns";
 import { restorePlayer } from "../utils/playerRestore.ts";
-import { sendVolume } from "../utils/playerPreferences.ts";
-import { sendTrackPosition } from "../utils/playerHistory.ts";
-import { setPlayerVolume } from "../storage/playerPreferences.ts";
+import { cacheVolume } from "../storage/playerPreferences.ts";
+import { persistTrackPosition } from "../utils/playerHistory.ts";
 import { AnyEventObject, assign, createMachine, interpret } from "xstate";
-import {
-  setTrackPosition,
-  setTracksToCache,
-} from "../storage/playerHistory.ts";
+import { cacheTrackPosition, cacheTracks } from "../storage/playerHistory.ts";
 
-// @TODO
-// - Rename to `History`
 export interface Track {
   id: string;
-  url: string;
+  title: string;
+  audio: string;
+  created: string;
+  updated: string;
+  description: string;
+}
+
+export interface History {
+  id: string;
+  user: string;
   track: string;
   created: string;
   updated: string;
   position: number;
 }
 
+export interface Playable extends Track {
+  url: string;
+  progress: number;
+  position: number;
+}
+
 interface PlayerMachineContext {
   id: string;
-  url: string;
   player: Howl;
   volume: number;
-  history: Track[];
-  position: number;
-  progress: number;
+  playable: Playable[];
 }
 
 const initialState = "populating";
@@ -39,23 +45,32 @@ const contextInterval = 0.1; // In seconds
 const createInitialContext = (
   context?: PlayerMachineContext,
 ): PlayerMachineContext => {
-  const { volume = 0.5, history = [] } = context || {};
+  const { volume = 0.5, playable = [] } = context || {};
 
   // @NOTE
   // - It's infinitely easier if the machine thinks that all fields in the context are required
   // - Casting this value to `PlayerMachineContext` helps to handle the XState type inference
   return {
     volume,
-    history,
-    position: 0,
-    progress: 0,
+    playable,
   } as PlayerMachineContext;
+};
+
+const getCurrentPlayable = (context: PlayerMachineContext) => {
+  const found = context.playable.find((item) => item.id === context.id);
+
+  if (found === undefined) {
+    throw new Error("Invalid ID found in context");
+  }
+
+  return found;
 };
 
 const createPlayerInstance = assign<PlayerMachineContext>({
   player: (context) => {
+    const playable = getCurrentPlayable(context);
     return new Howl({
-      src: [context.url],
+      src: [playable.url],
       html5: true,
       volume: context.volume,
     });
@@ -63,40 +78,51 @@ const createPlayerInstance = assign<PlayerMachineContext>({
 });
 
 const getTrackById = assign<PlayerMachineContext>(
-  (context, event: AnyEventObject) => {
-    const track = context.history.find((item) => item.id === event.value.id);
+  {
+    id: (context, event: AnyEventObject) => {
+      const track = context.playable.find((item) => item.id === event.value.id);
 
-    if (track === undefined) {
-      throw new Error(`No track found with ID "${event.value.id}", aborting`);
-    }
+      if (track === undefined) {
+        throw new Error(`No track found with ID "${event.value.id}", aborting`);
+      }
 
-    return {
-      ...context,
-      id: track.id,
-      url: track.url,
-      position: track.position,
-    };
+      return track.id;
+    },
   },
 );
 
 const getLatestTrack = assign<PlayerMachineContext>(
-  (context) => {
-    const [latest] = context.history.sort((a, b) => {
-      return isAfter(parseJSON(a.updated), parseJSON(b.updated)) ? 1 : -1;
-    });
+  {
+    id: (context) => {
+      const [latest] = context.playable.sort((a, b) => {
+        return isAfter(parseJSON(a.updated), parseJSON(b.updated)) ? 1 : -1;
+      });
 
-    if (latest === undefined) {
-      throw new Error(`Unable to find latest track, aborting`);
-    }
+      if (latest === undefined) {
+        throw new Error(`Unable to find latest track, aborting`);
+      }
 
-    return {
-      ...context,
-      id: latest.id,
-      url: latest.url,
-      position: latest.position,
-    };
+      return latest.id;
+    },
   },
 );
+
+const updateCurrentPlayable = assign<PlayerMachineContext>({
+  playable: (context, event: AnyEventObject) => {
+    const current = getCurrentPlayable(context);
+
+    const filtered = context.playable.filter((item) => item.id !== current.id);
+
+    return [
+      ...filtered,
+      {
+        ...current,
+        progress: event.value.progress,
+        position: event.value.position,
+      },
+    ];
+  },
+});
 
 const playerMachine = createMachine<PlayerMachineContext>({
   predictableActionArguments: true,
@@ -115,10 +141,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
     },
     VOLUME_SET: {
       actions: [
-        (context, event) => context.player.volume(event.value),
         assign({ volume: (_, event) => event.value }),
-        (_, event) => setPlayerVolume(event.value),
-        (_, event) => sendVolume(event.value),
+        (_, event) => cacheVolume(event.value),
       ],
     },
     SELECT_TRACK_INFO: {
@@ -143,10 +167,10 @@ const playerMachine = createMachine<PlayerMachineContext>({
           target: "paused",
           actions: [
             assign({ volume: (_, event) => event.data.volume }),
-            assign({ history: (_, event) => event.data.tracks }),
+            assign({ playable: (_, event) => event.data.tracks }),
             getLatestTrack,
-            (_, event) => setPlayerVolume(event.data.volume),
-            (_, event) => setTracksToCache(event.data.tracks),
+            (_, event) => cacheVolume(event.data.volume),
+            (_, event) => cacheTracks(event.data.tracks),
           ],
         },
         onError: {
@@ -173,15 +197,19 @@ const playerMachine = createMachine<PlayerMachineContext>({
           target: "paused",
         },
         UPDATE_CONTEXT: {
-          actions: [
-            assign({ progress: (_, event) => event.value.progress }),
-            assign({ position: (_, event) => event.value.position }),
-          ],
+          actions: updateCurrentPlayable,
         },
         PERSIST_POSITION: {
           actions: [
-            (context, event) => setTrackPosition(context.id, event.value),
-            (context, event) => sendTrackPosition(context.id, event.value),
+            (context, event) => cacheTrackPosition(context.id, event.value),
+            (context, event) => persistTrackPosition(context.id, event.value),
+          ],
+        },
+        VOLUME_SET: {
+          actions: [
+            assign({ volume: (_, event) => event.value }),
+            (context, event) => context.player.volume(event.value),
+            (_, event) => cacheVolume(event.value),
           ],
         },
       },
@@ -190,13 +218,11 @@ const playerMachine = createMachine<PlayerMachineContext>({
         // - Unfortunately this needs to be done here
         // - This is to get around audio context issues on page load
         (context) => context.player.pause(),
-        // @TODO
-        // - Persist track position to the context
-        // - Storage is already taken care of
+        // updateCurrentPlayable,
       ],
       entry: [
         createPlayerInstance,
-        (context) => context.player.seek(context.position),
+        (context) => context.player.seek(getCurrentPlayable(context).position),
         (context) => context.player.play(),
       ],
       invoke: {
@@ -240,4 +266,4 @@ const playerService = interpret(playerMachine)
   .onTransition((state) => playerSignal.value = state)
   .start();
 
-export { playerService, playerSignal };
+export { playerService, playerSignal, getCurrentPlayable };
