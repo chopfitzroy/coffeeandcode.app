@@ -1,9 +1,9 @@
 import { trap } from "./trap.ts";
 import { pb } from "./pocketbase.ts";
 import { fetchTracks } from "./playerHistory.ts";
-import { History } from "../services/playerService.ts";
-import { getCachedTracks } from "../storage/playerHistory.ts";
+import { History, Track } from "../services/playerService.ts";
 import { getCachedVolume } from "../storage/playerPreferences.ts";
+import { getCachedAllPositionAndProgress } from "../storage/playerHistory.ts";
 
 const restoreHistory = async () => {
   const [realHistory] = await trap(fetchTracks)();
@@ -12,12 +12,12 @@ const restoreHistory = async () => {
     return realHistory;
   }
 
-  const [cachedHistory] = await trap(getCachedTracks)();
+  const [cachedHistory] = await trap(getCachedAllPositionAndProgress)();
 
   return cachedHistory || [];
 };
 
-const restoreTracks = async () => {
+const restorePlayables = async () => {
   const [history, tracks] = await Promise.all([
     restoreHistory(),
     pb.collection("tracks").getFullList<History>(50, {
@@ -25,18 +25,20 @@ const restoreTracks = async () => {
     }),
   ]);
 
-  return tracks.map((track) => {
-    const match = history.find((item) => {
+  return tracks.map((track: Track) => {
+    const match = history.find((item: History) => {
       return item.track === track.id;
     });
 
     const url = `https://api.coffeeandcode.app/api/files/${track.collectionId}/${track.id}/${track.audio}`;
-    const position = match ? match.position : 0;
-    
+    const position = match === undefined ? 0 : match.position;
+    const progress = match === undefined ? 0 : match.progress;
+
     return {
       ...track,
       url,
-      position
+      position,
+      progress
     };
   });
 };
@@ -47,12 +49,12 @@ const restoreVolume = async () => {
 };
 
 const restorePlayer = async () => {
-  const tracks = await restoreTracks();
   const volume = await restoreVolume();
+  const playables = await restorePlayables();
 
   return {
-    tracks,
     volume,
+    playables
   };
 };
 

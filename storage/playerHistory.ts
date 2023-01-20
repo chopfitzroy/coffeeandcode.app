@@ -1,7 +1,7 @@
 import localforage from "localforage";
 
 import { IS_BROWSER } from "$fresh/runtime.ts";
-import { History } from "../services/playerService.ts";
+import { Playable } from "../services/playerService.ts";
 
 const playerHistoryTable = localforage.createInstance({
   name: "playerHistory",
@@ -9,52 +9,53 @@ const playerHistoryTable = localforage.createInstance({
   description: "Store the player history",
 });
 
-const getCachedTracks = async () => {
+const getCachedAllPositionAndProgress = async () => {
   if (!IS_BROWSER) {
     throw new Error("Running in server environment, aborting cache lookup");
   }
 
-  if (!IS_BROWSER) {
-    console.info("Cannot use cache in server environment, aborting");
-    return;
-  }
   const keys = await playerHistoryTable.keys();
 
-  const values = keys.map(async (key) => ({
-    track: key,
-    position: await playerHistoryTable.getItem(key),
-  }));
+  const values = keys.map(key => playerHistoryTable.getItem(key));
 
   return await Promise.all(values);
 };
 
-const cacheTracks = async (tracks: History[]) => {
+const cacheAllPositionAndProgress = async (playables: Playable[]) => {
   if (!IS_BROWSER) {
     console.info("Cannot use cache in server environment, aborting");
     return;
   }
 
-  const tasks = tracks.map((track) =>
-    playerHistoryTable.setItem(track.id, track.position)
+  const tasks = playables.map((playable) =>
+    playerHistoryTable.setItem(playable.id, {
+      track: playable.id,
+      position: playable.position,
+      progress: playable.progress
+    })
   );
 
   return await Promise.all(tasks);
 };
 
-const cacheTrackPosition = async (id: string, position: number) => {
+const cacheSinglePositionAndProgress = async (playable: Playable) => {
   if (!IS_BROWSER) {
     console.info("Cannot use cache in server environment, aborting");
     return;
   }
 
   try {
-    await playerHistoryTable.setItem(id, position);
+    await playerHistoryTable.setItem(playable.id, {
+      track: playable.id,
+      position: playable.position,
+      progress: playable.progress
+    });
   } catch (err) {
     console.info(
-      `Error setting "${id}" with value "${position}" aborting`,
+      `Error caching "${playable.id}"`,
       err,
     );
   }
 };
 
-export { getCachedTracks, cacheTrackPosition, cacheTracks };
+export { getCachedAllPositionAndProgress, cacheSinglePositionAndProgress, cacheAllPositionAndProgress };

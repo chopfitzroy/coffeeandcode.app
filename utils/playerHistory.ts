@@ -1,3 +1,4 @@
+import { Playable } from "../services/playerService.ts";
 import { pb } from "./pocketbase.ts";
 
 const fetchTracks = async () => {
@@ -16,26 +17,27 @@ const fetchTracks = async () => {
   return records;
 };
 
-const createTrackPosition = async (id: string, position: number) => {
+const createHistory = async (playable: Playable) => {
   try {
     const user = pb.authStore.model.id;
     const data = {
       user,
-      position,
-      track: id,
+      track: playable.id,
+      position: playable.position,
+      progress: playable.progress
     };
 
     const record = await pb.collection("history").create(data);
     return record;
   } catch (err) {
     console.info(
-      `Something went wrong when trying to create "${id}" at position "${position}" aborting`,
+      `Something went wrong when trying to create "${playable.id}", aborting`,
       err,
     );
   }
 };
 
-const persistTrackPosition = async (id: string, position: number) => {
+const persistHistory = async (playable: Playable) => {
   const loggedIn = pb.authStore.isValid;
 
   if (loggedIn === false) {
@@ -45,7 +47,7 @@ const persistTrackPosition = async (id: string, position: number) => {
 
   try {
     const user = pb.authStore.model.id;
-    const filter = `user="${user}" && track="${id}"`;
+    const filter = `user="${user}" && track="${playable.id}"`;
 
     const { id: existingId, track } = await pb.collection("history")
       .getFirstListItem(filter);
@@ -53,21 +55,22 @@ const persistTrackPosition = async (id: string, position: number) => {
     const record = await pb.collection("history").update(existingId, {
       user,
       track,
-      position,
+      position: playable.position,
+      progress: playable.progress
     });
 
     return record;
   } catch (err) {
     if (err.status !== 404) {
       console.info(
-        `Something went wrong when trying to update "${id}" at position "${position}" aborting`,
+        `Something went wrong when trying to update "${playable.id}", aborting`,
         err,
       );
       return;
     }
 
-    return createTrackPosition(id, position);
+    return createHistory(playable);
   }
 };
 
-export { fetchTracks, persistTrackPosition };
+export { fetchTracks, persistHistory };

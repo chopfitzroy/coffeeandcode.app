@@ -2,10 +2,13 @@ import { Howl, Howler } from "howler";
 import { signal } from "@preact/signals";
 import { isAfter, parseJSON } from "date-fns";
 import { restorePlayer } from "../utils/playerRestore.ts";
+import { persistHistory } from "../utils/playerHistory.ts";
 import { cacheVolume } from "../storage/playerPreferences.ts";
-import { persistTrackPosition } from "../utils/playerHistory.ts";
 import { AnyEventObject, assign, createMachine, interpret } from "xstate";
-import { cacheTrackPosition, cacheTracks } from "../storage/playerHistory.ts";
+import {
+  cacheAllPositionAndProgress,
+  cacheSinglePositionAndProgress,
+} from "../storage/playerHistory.ts";
 
 export interface Track {
   id: string;
@@ -14,6 +17,7 @@ export interface Track {
   created: string;
   updated: string;
   description: string;
+  collectionId: string;
 }
 
 export interface History {
@@ -23,6 +27,7 @@ export interface History {
   created: string;
   updated: string;
   position: number;
+  collectionId: string;
 }
 
 export interface Playable extends Track {
@@ -35,35 +40,47 @@ interface PlayerMachineContext {
   id: string;
   player: Howl;
   volume: number;
-  playable: Playable[];
+  playables: Playable[];
 }
 
 const initialState = "populating";
 const persistInterval = 5; // In seconds
-const contextInterval = 0.1; // In seconds
+const contextInterval = 1; // In seconds
 
 const createInitialContext = (
   context?: PlayerMachineContext,
 ): PlayerMachineContext => {
-  const { volume = 0.5, playable = [] } = context || {};
+  const { volume = 0.5, playables = [] } = context || {};
 
   // @NOTE
   // - It's infinitely easier if the machine thinks that all fields in the context are required
   // - Casting this value to `PlayerMachineContext` helps to handle the XState type inference
   return {
     volume,
-    playable,
+    playables,
   } as PlayerMachineContext;
 };
 
-const getCurrentPlayable = (context: PlayerMachineContext) => {
-  const found = context.playable.find((item) => item.id === context.id);
+const getPositionAndProgress = (context: PlayerMachineContext) => {
+  const position = context.player.seek();
+  const duration = context.player.duration();
+  const value = (position / duration) * 100;
+  const progress = Math.round(value * 100 + Number.EPSILON) / 100;
 
-  if (found === undefined) {
+  return {
+    position,
+    progress,
+  };
+};
+
+const getCurrentPlayable = (context: PlayerMachineContext) => {
+  const playable = context.playables.find((item) => item.id === context.id);
+
+  if (playable === undefined) {
     throw new Error("Invalid ID found in context");
   }
 
-  return found;
+  return playable;
 };
 
 const createPlayerInstance = assign<PlayerMachineContext>({
@@ -77,41 +94,45 @@ const createPlayerInstance = assign<PlayerMachineContext>({
   },
 });
 
-const getTrackById = assign<PlayerMachineContext>(
+const getPlayableById = assign<PlayerMachineContext>(
   {
     id: (context, event: AnyEventObject) => {
-      const track = context.playable.find((item) => item.id === event.value.id);
+      const playable = context.playables.find((item) =>
+        item.id === event.value.id
+      );
 
-      if (track === undefined) {
+      if (playable === undefined) {
         throw new Error(`No track found with ID "${event.value.id}", aborting`);
       }
 
-      return track.id;
+      console.log('Playable', playable);
+
+      return playable.id;
     },
   },
 );
 
-const getLatestTrack = assign<PlayerMachineContext>(
+const getLatestPlayable = assign<PlayerMachineContext>(
   {
     id: (context) => {
-      const [latest] = context.playable.sort((a, b) => {
+      const [playable] = context.playables.sort((a, b) => {
         return isAfter(parseJSON(a.updated), parseJSON(b.updated)) ? 1 : -1;
       });
 
-      if (latest === undefined) {
+      if (playable === undefined) {
         throw new Error(`Unable to find latest track, aborting`);
       }
 
-      return latest.id;
+      return playable.id;
     },
   },
 );
 
 const updateCurrentPlayable = assign<PlayerMachineContext>({
-  playable: (context, event: AnyEventObject) => {
+  playables: (context, event: AnyEventObject) => {
     const current = getCurrentPlayable(context);
 
-    const filtered = context.playable.filter((item) => item.id !== current.id);
+    const filtered = context.playables.filter((item) => item.id !== current.id);
 
     return [
       ...filtered,
@@ -150,7 +171,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
       actions: [
         () => Howler.unload(),
         assign((context) => createInitialContext(context)),
-        getTrackById,
+        getPlayableById,
       ],
     },
   },
@@ -167,10 +188,10 @@ const playerMachine = createMachine<PlayerMachineContext>({
           target: "paused",
           actions: [
             assign({ volume: (_, event) => event.data.volume }),
-            assign({ playable: (_, event) => event.data.tracks }),
-            getLatestTrack,
+            assign({ playables: (_, event) => event.data.playables }),
+            getLatestPlayable,
             (_, event) => cacheVolume(event.data.volume),
-            (_, event) => cacheTracks(event.data.tracks),
+            (_, event) => cacheAllPositionAndProgress(event.data.playables),
           ],
         },
         onError: {
@@ -199,10 +220,10 @@ const playerMachine = createMachine<PlayerMachineContext>({
         UPDATE_CONTEXT: {
           actions: updateCurrentPlayable,
         },
-        PERSIST_POSITION: {
+        PERSIST_POSITION_AND_PROGRESS: {
           actions: [
-            (context, event) => cacheTrackPosition(context.id, event.value),
-            (context, event) => persistTrackPosition(context.id, event.value),
+            (_, event) => persistHistory(event.value),
+            (_, event) => cacheSinglePositionAndProgress(event.value),
           ],
         },
         VOLUME_SET: {
@@ -227,19 +248,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
       ],
       invoke: {
         src: (context) => (send) => {
-          const persistTimer = setInterval(() => {
-            const position = context.player.seek();
-            send({
-              type: "PERSIST_POSITION",
-              value: position,
-            });
-          }, 1000 * persistInterval);
-
           const contextTimer = setInterval(() => {
-            const position = context.player.seek();
-            const duration = context.player.duration();
-            const value = (position / duration) * 100;
-            const progress = Math.round(value * 100 + Number.EPSILON) / 100;
+            const { position, progress } = getPositionAndProgress(context);
 
             send({
               type: "UPDATE_CONTEXT",
@@ -249,6 +259,18 @@ const playerMachine = createMachine<PlayerMachineContext>({
               },
             });
           }, 1000 * contextInterval);
+
+          const persistTimer = setInterval(() => {
+            const { position, progress } = getPositionAndProgress(context);
+            send({
+              type: "PERSIST_POSITION_AND_PROGRESS",
+              value: {
+                id: context.id,
+                progress,
+                position,
+              },
+            });
+          }, 1000 * persistInterval);
 
           return () => {
             clearInterval(persistTimer);
@@ -266,4 +288,4 @@ const playerService = interpret(playerMachine)
   .onTransition((state) => playerSignal.value = state)
   .start();
 
-export { playerService, playerSignal, getCurrentPlayable };
+export { getCurrentPlayable, playerService, playerSignal };
