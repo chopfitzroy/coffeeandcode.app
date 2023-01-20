@@ -239,7 +239,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
         // - Unfortunately this needs to be done here
         // - This is to get around audio context issues on page load
         (context) => context.player.pause(),
-        // updateCurrentPlayable,
       ],
       entry: [
         createPlayerInstance,
