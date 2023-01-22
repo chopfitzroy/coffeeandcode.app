@@ -1,10 +1,11 @@
 ### MVP
 
-- [x] User history collection (relational)
 - [x] Player
-- [ ] Player analytics
 - [x] Player caching (server and local)
 - [ ] Styling
+- [ ] Player analytics
+- [ ] SMTP server for emails
+- [ ] Email sign in (over username)
 
 ### Future
 

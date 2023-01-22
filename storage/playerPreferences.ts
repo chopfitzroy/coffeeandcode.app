@@ -9,6 +9,10 @@ const playerPreferencesTable = localforage.createInstance({
 });
 
 const getCachedVolume = () => {
+  if (!IS_BROWSER) {
+    throw new Error("Cannot use cache in server environment, aborting");
+  }
+
 	return playerPreferencesTable.getItem('playerVolume');
 }
 
@@ -21,7 +25,7 @@ const cacheVolume = async (volume: number) => {
 	try {
 		await playerPreferencesTable.setItem('playerVolume', volume);
 	} catch (err) {
-		console.info(`Failed to set volume with vale of "${volume}" aborting`, err);
+		console.info(`Failed to cache volume, aborting`, err);
 	}
 }
 

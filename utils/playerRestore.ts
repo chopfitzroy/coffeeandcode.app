@@ -21,7 +21,7 @@ const restorePlayables = async () => {
   const [history, tracks] = await Promise.all([
     restoreHistory(),
     pb.collection("tracks").getFullList<History>(50, {
-      sort: "-published",
+      sort: "-created",
     }),
   ]);
 

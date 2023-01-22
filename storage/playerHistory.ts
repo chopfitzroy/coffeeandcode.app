@@ -11,7 +11,7 @@ const playerHistoryTable = localforage.createInstance({
 
 const getCachedAllPositionAndProgress = async () => {
   if (!IS_BROWSER) {
-    throw new Error("Running in server environment, aborting cache lookup");
+    throw new Error("Cannot use cache in server environment, aborting");
   }
 
   const keys = await playerHistoryTable.keys();
@@ -51,10 +51,7 @@ const cacheSinglePositionAndProgress = async (playable: Playable) => {
       progress: playable.progress
     });
   } catch (err) {
-    console.info(
-      `Error caching "${playable.id}"`,
-      err,
-    );
+		console.info(`Failed to cache position and progress, aborting`, err);
   }
 };
 
