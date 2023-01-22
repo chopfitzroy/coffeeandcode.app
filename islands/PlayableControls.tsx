@@ -2,6 +2,18 @@ import { playerSignal, playerService, getCurrentPlayable } from "../services/pla
 
 const visibleStates = ['paused', 'playing'];
 
+const seekProgress = (event: unknown) => {
+  const progress = event.target.value as number;
+
+  playerService.send({
+    type: 'SEEK',
+    value: {
+      progress,
+      position: null
+    }
+  });
+}
+
 const updateVolume = (event: unknown) => {
   const value = event.target.value as number;
   const volume = value / 100;
@@ -22,7 +34,7 @@ const TrackControls = () => {
   return (
     <div>
       <p>{playerSignal.value.value}</p>
-      <input type="range" name="playback" min="0" max="100" value={current.progress} />
+      <input type="range" name="playback" min="0" max="100" value={current.progress} onInput={seekProgress} />
       <button onClick={() => playerService.send('PLAY')}>Play</button>
       <button onClick={() => playerService.send('PAUSE')}>Pause</button>
       <input type="range" name="volume" min="0" max="100" value={volume} onInput={updateVolume} />

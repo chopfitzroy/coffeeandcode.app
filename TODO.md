@@ -2,6 +2,8 @@
 
 - [x] Player
 - [x] Player caching (server and local)
+- [ ] Skip to position (audio)
+- [ ] Remove notion of `position` and only store `progress`
 - [ ] Styling
 - [ ] Player analytics
 - [ ] SMTP server for emails

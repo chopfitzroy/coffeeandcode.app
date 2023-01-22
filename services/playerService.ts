@@ -32,8 +32,10 @@ export interface History {
 
 export interface Playable extends Track {
   url: string;
+  // @TODO
+  // - Maybe we should just support progress?
   progress: number;
-  position: number;
+  position: null | number;
 }
 
 interface PlayerMachineContext {
@@ -83,16 +85,22 @@ const getCurrentPlayable = (context: PlayerMachineContext) => {
   return playable;
 };
 
-const createPlayerInstance = assign<PlayerMachineContext>({
-  player: (context) => {
-    const playable = getCurrentPlayable(context);
-    return new Howl({
-      src: [playable.url],
-      html5: true,
-      volume: context.volume,
-    });
-  },
-});
+const getCurrentPosition = (context: PlayerMachineContext) => {
+  const playable = getCurrentPlayable(context);
+
+  if (playable.position !== null) {
+    return playable.position;
+  }
+
+  console.log(context.player);
+
+  const progress = playable.progress;
+  const duration = context.player.duration();
+
+  console.log({ duration, progress });
+
+  return duration * progress;
+};
 
 const getPlayableById = assign<PlayerMachineContext>(
   {
@@ -143,18 +151,29 @@ const updateCurrentPlayable = assign<PlayerMachineContext>({
   },
 });
 
+// @TODO
+// - Add `populated` state
+// - Add entry event to `paused`
+// - Add `PLAY` listener to `populated` (will jump to `loading`)
+// - Add `PLAY` listener on `paused` (will jump straight to `playing`)
 const playerMachine = createMachine<PlayerMachineContext>({
   predictableActionArguments: true,
   context: createInitialContext(),
   initial: initialState,
   on: {
     PLAY: {
-      target: "playing",
+      target: "loading",
+    },
+    SEEK: {
+      // @TODO
+      // - This probably looks different for `paused` and `playing`
+      actions: [
+        updateCurrentPlayable,
+      ],
     },
     STOP: {
       target: "stopped",
       actions: [
-        () => Howler.unload(),
         assign((context) => createInitialContext(context)),
       ],
     },
@@ -165,9 +184,8 @@ const playerMachine = createMachine<PlayerMachineContext>({
       ],
     },
     SELECT_TRACK_INFO: {
-      target: "playing",
+      target: "loading",
       actions: [
-        () => Howler.unload(),
         assign((context) => createInitialContext(context)),
         getPlayableById,
       ],
@@ -210,6 +228,29 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // @NOTE
       // - All events that would be caught here are global
     },
+    loading: {
+      entry: () => Howler.unload(),
+      invoke: {
+        src: (context) =>
+          new Promise((res) => {
+            const playable = getCurrentPlayable(context);
+            const player = new Howl({
+              src: [playable.url],
+              html5: true,
+              volume: context.volume,
+            });
+
+            player.on("load", () => res(player));
+          }),
+        onDone: {
+          target: "playing",
+          actions: assign({ player: (_, event) => event.data }),
+        },
+        onError: {
+          target: "failed",
+        },
+      },
+    },
     playing: {
       on: {
         PAUSE: {
@@ -239,8 +280,7 @@ const playerMachine = createMachine<PlayerMachineContext>({
         (context) => context.player.pause(),
       ],
       entry: [
-        createPlayerInstance,
-        (context) => context.player.seek(getCurrentPlayable(context).position),
+        (context) => context.player.seek(getCurrentPosition(context)),
         (context) => context.player.play(),
       ],
       invoke: {
