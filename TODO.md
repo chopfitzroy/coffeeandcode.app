@@ -1,7 +1,7 @@
 ### MVP
 
 - [x] User history collection (relational)
-- [ ] Player
+- [x] Player
 - [ ] Player analytics
 - [x] Player caching (server and local)
 - [ ] Styling

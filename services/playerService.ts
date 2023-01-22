@@ -105,8 +105,6 @@ const getPlayableById = assign<PlayerMachineContext>(
         throw new Error(`No track found with ID "${event.value.id}", aborting`);
       }
 
-      console.log('Playable', playable);
-
       return playable.id;
     },
   },
