@@ -171,12 +171,6 @@ const playerMachine = createMachine<PlayerMachineContext>({
         updateCurrentPlayable,
       ],
     },
-    STOP: {
-      target: "stopped",
-      actions: [
-        assign((context) => createInitialContext(context)),
-      ],
-    },
     VOLUME_SET: {
       actions: [
         assign({ volume: (_, event) => event.value }),
@@ -220,13 +214,9 @@ const playerMachine = createMachine<PlayerMachineContext>({
       // @TODO
       // - Tell the user to refresh the page
     },
-    stopped: {
-      // @NOTE
-      // - All events that would be caught here are global
-    },
     paused: {
-      // @NOTE
-      // - All events that would be caught here are global
+      // @TODO
+      // - Move relevant events here
     },
     loading: {
       entry: () => Howler.unload(),
